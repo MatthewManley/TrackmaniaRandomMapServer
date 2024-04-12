@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<UserSecretsId>da3cf941-4962-4d2f-8c71-8776d2a843d3</UserSecretsId>
+		<DockerfileRunArguments>-v "Z:\trackmania\UserData:/data"</DockerfileRunArguments>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="GbxRemote.Net" Version="5.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
+		<PackageReference Include="SuperXML" Version="3.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="template.xml">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>
