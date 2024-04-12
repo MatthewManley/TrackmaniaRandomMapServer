@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "TrackmaniaRandomMapServer": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
