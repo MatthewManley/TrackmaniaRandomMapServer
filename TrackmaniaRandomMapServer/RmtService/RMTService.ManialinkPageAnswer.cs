@@ -2,9 +2,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace TrackmaniaRandomMapServer.RmtService
@@ -28,14 +25,91 @@ namespace TrackmaniaRandomMapServer.RmtService
                     await OnVoteGoldSkip(e.Login);
                     break;
                 case "ForceGoldSkip":
-                    await OnForceGoldSkip(e.Login);
+                    await OnForceGoldSkip();
+                    break;
+                case "VoteQuit":
+                    await OnVoteQuit(e.Login);
+                    break;
+                case "ForceQuit":
+                    await OnForceQuit();
                     break;
                 default:
                     break;
             }
         }
 
-        private async Task OnForceGoldSkip(string login)
+        private async Task OnForceQuit()
+        {
+            try
+            {
+                await semaphoreSlim.WaitAsync();
+                logger.LogTrace("OnForceQuit enter semaphor");
+                if (!RmtRunning)
+                {
+                    logger.LogTrace("OnForceQuit exit semaphor");
+                    semaphoreSlim.Release();
+                    return;
+                }
+                if (CanForceQuit())
+                {
+                    logger.LogTrace("OnForceQuit exit semaphor");
+                    RmtRunning = false;
+                    semaphoreSlim.Release();
+                    scoreboardVisible = true;
+                    await SetTmScoreboardVisibility(false);
+                    await UpdateView();
+                    await tmClient.RestartMapAsync();
+                    
+                }
+                else
+                {
+                    logger.LogTrace("OnForceQuit exit semaphor");
+                    semaphoreSlim.Release();
+                    await tmClient.ChatSendServerMessageAsync($"Not enough votes to skip: {playerStateService.QuitVotes()}/{MinimumVotes()}");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in OnForceQuit");
+                throw;
+            }
+        }
+
+        private async Task OnVoteQuit(string login)
+        {
+            try
+            {
+                await semaphoreSlim.WaitAsync();
+                logger.LogTrace("OnVoteQuit enter semaphor");
+                if (!RmtRunning || mapFinished)
+                {
+                    logger.LogTrace("OnVoteQuit exit semaphor");
+                    semaphoreSlim.Release();
+                    return;
+                }
+                var playerState = playerStateService.GetPlayerState(login);
+                playerState.VoteQuit = !playerState.VoteQuit;
+                logger.LogTrace("OnVoteQuit exit semaphor");
+                semaphoreSlim.Release();
+
+                if (playerState.VoteQuit)
+                {
+                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} voted to Quit RMT. {playerStateService.QuitVotes()}/{MinimumVotes()}");
+                }
+                else
+                {
+                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} canceled their vote to Quit RMT. {playerStateService.QuitVotes()}/{MinimumVotes()}");
+                }
+                await UpdateView();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in OnVoteQuit");
+                throw;
+            }
+        }
+
+        private async Task OnForceGoldSkip()
         {
             try
             {
@@ -47,7 +121,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                     semaphoreSlim.Release();
                     return;
                 }
-                var playerState = playerStateService.GetPlayerState(login);
+                var playerState = playerStateService.GetPlayerState(goldCredit);
                 if (CanForceGoldSkip())
                 {
                     playerState.GoodSkips += 1;
