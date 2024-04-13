@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using TrackmaniaRandomMapServer.Events;
+using TrackmaniaRandomMapServer.Models;
 
 namespace TrackmaniaRandomMapServer.RmtService
 {

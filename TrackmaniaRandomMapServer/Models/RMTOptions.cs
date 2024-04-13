@@ -1,4 +1,4 @@
-﻿namespace TrackmaniaRandomMapServer
+﻿namespace TrackmaniaRandomMapServer.Models
 {
     public class RMTOptions
     {

@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace TrackmaniaRandomMapServer
+namespace TrackmaniaRandomMapServer.Models
 {
     public class TmxQueryResult
     {

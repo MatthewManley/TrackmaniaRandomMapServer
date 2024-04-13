@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using TrackmaniaRandomMapServer;
+using TrackmaniaRandomMapServer.Models;
 using TrackmaniaRandomMapServer.RmtService;
 
 internal class Program

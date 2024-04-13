@@ -1,10 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace TrackmaniaRandomMapServer
+namespace TrackmaniaRandomMapServer.Models
 {
     public class TmxMap
     {
@@ -66,7 +63,7 @@ namespace TrackmaniaRandomMapServer
         public string Name { get; set; }
 
         [JsonProperty("Tags")]
-        public string? Tags { get; set; }
+        public string Tags { get; set; }
 
         [JsonProperty("TypeName")]
         public string TypeName { get; set; }

@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace TrackmaniaRandomMapServer
+namespace TrackmaniaRandomMapServer.Models
 {
     public class UiModule
     {
