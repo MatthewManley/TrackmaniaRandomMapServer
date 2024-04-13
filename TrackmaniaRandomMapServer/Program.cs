@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using TrackmaniaRandomMapServer;
 using TrackmaniaRandomMapServer.RmtService;
@@ -20,7 +21,9 @@ internal class Program
         })
         .ConfigureServices((hostContext, services) =>
         {
+            services.AddLogging(builder => builder.AddConsole());
             services.AddOptions();
+            services.AddSingleton<PlayerStateService>();
             services.AddTransient<TmxRestClient>();
             services.AddHttpClient();
             services.ConfigureHttpClientDefaults(client =>

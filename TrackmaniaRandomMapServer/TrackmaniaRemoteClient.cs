@@ -6,7 +6,7 @@ using TrackmaniaRandomMapServer.Events;
 
 namespace TrackmaniaRandomMapServer
 {
-    internal class TrackmaniaRemoteClient : GbxRemoteNet.GbxRemoteClient
+    public class TrackmaniaRemoteClient : GbxRemoteNet.GbxRemoteClient
     {
         public TrackmaniaRemoteClient(string host, int port, ILogger logger = null) : base(host, port, logger)
         {

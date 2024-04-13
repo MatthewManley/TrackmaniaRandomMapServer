@@ -1,0 +1,18 @@
+﻿- Improve Scoreboard
+  - Add Number of Skips used to board
+  - Show number of gold medals each player has won
+  - Show best times for each player on last map
+  - Display who got AT/Gold on the last map (just as chat message is easy win)
+- Show who pressed the force button(s)
+- Quit and Quit Voting buttons
+- Seperate the single template into 3 sepearate templates
+- Handle time running out
+- Allow setting the hub map (voting?)
+- Allow setting RMT difficulty
+  - Win can be set to AT / Gold / Silver / Bronze
+  - Skip can be set to Gold / Silver / Bronze / Finish
+- Allow setting RMT duration 
+- If all players vote for something, don't wait for a player to hit the force button
+  - Extend the player voted server message to include total players
+- Reset best map times when a map ends
+- Ohio branding on templates

@@ -18,4 +18,28 @@
 		<label sxIf="CanForceSkip" pos="45 -18" z-index="1" text="Force Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceSkip" bgcolor="00A565FF"/>
 		<label sxIf="CanForceQuit" pos="45 -12" z-index="1" text="Force Quit" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceQuit" bgcolor="00A565FF"/>
 	</frame>
+	<frame sxIf="DisplayScoreboard" pos="-80 80" size="160 160" z-idex="3">
+		<quad pos="0 0" size="160 160"  bgcolor="101010EE"/>
+		<frame pos="20 -5" size="120 50" z-idex="4">
+			<label pos="60 -5" size="60 10" text="RMT SCORE" textsize="10"
+				   halign="center" valign="center" style="ManiaPlanetLogos" />
+
+			<quad pos="5 -15"   size="20 20" style="MedalsBig" substyle="MedalNadeo" autoscale="1" keepratio="Fit"/>
+			<label pos="40 -25" size="30 20"  text="{{wins}}" textsize="8" textfont="RajdhaniMono" valign="center" halign="right" />
+			<quad pos="70 -15"  size="20 20" style="MedalsBig" substyle="MedalGold" autoscale="1" keepratio="Fit"/>
+			<label pos="100 -25" size="30 20" text="{{skips}}" textsize="8" textfont="RajdhaniMono" valign="center" halign="right" />
+			<label pos="5 -38" text="TIME LEFT: {{time_left}}" textsize="5" textfont="RajdhaniMono" />
+		</frame>
+		<frame pos="20 -50" size="120 100" z-idex="4">
+			<frame sxRepeat="player in Scoreboard" pos="0 {{ -10 * $index }}" size="120 10">
+				<quad pos="0 0" size="120 10" bgcolor="eeeeeeFF"/>
+				<quad pos="1 -0.5" size="99 9" bgcolor="513877FF"/>
+				<quad pos="100 -0.5" size="19 9" bgcolor="333333FF"/>
+				<label pos="55 -4.5" size="55 9" text="{{player.DisplayName}}" textsize="3.5" textfont="RajdhaniMono"
+								   halign="center" valign="center" />
+				<label pos="105 -4.5" size="10 9" text="{{player.NumWins}}" textsize="3.5" textfont="RajdhaniMono"
+								   halign="left" valign="center" />
+			</frame>
+		</frame>
+	</frame>
 </manialink>

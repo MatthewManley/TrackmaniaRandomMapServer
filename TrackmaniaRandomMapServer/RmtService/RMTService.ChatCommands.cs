@@ -30,7 +30,7 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         private async Task PlayersCommand(string[] parts, PlayerChatGbxEventArgs e)
         {
-            var response = "Players: " + string.Join(", ", ConnectedPlayers.Select(keyValue => $"{keyValue.Key}:{keyValue.Value.NickName ?? "null"}"));
+            var response = "Players: " + playerStateService.PlayerNames();
             await tmClient.ChatSendServerMessageToLoginAsync(response, e.Login);
         }
     }
