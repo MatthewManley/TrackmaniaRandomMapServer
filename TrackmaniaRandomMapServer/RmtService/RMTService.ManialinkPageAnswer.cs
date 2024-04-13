@@ -128,13 +128,22 @@ namespace TrackmaniaRandomMapServer.RmtService
                 }
 
                 RmtRunning = true;
+                scoreboardVisible = false;
                 playerStateService.CancelAllVotes();
+                goldCredit = null;
+                mapStartTime = null;
+                remainingTime = 60 * 60;
+                mapFinished = true;
+                winScore = 0;
+                goodSkipScore = 0;
+                badSkipScore = 0;
+
                 logger.LogTrace("OnStartRMT exit semaphor");
                 semaphoreSlim.Release();
 
+                await SetRemainingTime(remainingTime);
                 await UpdateView();
                 await AdvanceMap();
-                await SetRemainingTime(60 * 60);
             }
             catch (Exception ex)
             {

@@ -189,12 +189,11 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         private async Task UpdateView(string playerLogin = null)
         {
-            var displayScoreboard = RmtRunning && scoreboardVisible;
             var compiler = new Compiler()
-                .AddKey("DisplayWelcome", !RmtRunning)
+                .AddKey("DisplayWelcome", !RmtRunning && !scoreboardVisible)
                 //.AddKey("DisplayWelcome", false)
                 .AddKey("DisplayScore", RmtRunning && !scoreboardVisible)
-                .AddKey("DisplayScoreboard", displayScoreboard)
+                .AddKey("DisplayScoreboard", scoreboardVisible)
                 //.AddKey("DisplayScore", true)
                 .AddKey("wins", winScore)
                 .AddKey("skips", goodSkipScore)
@@ -221,8 +220,20 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         private async Task Client_OnEndMapStart(object sender, ManiaplanetEndMap e)
         {
-            scoreboardVisible = true;
-            await SetTmScoreboardVisibility(false);
+            await semaphoreSlim.WaitAsync();
+            bool wasRMTRunning = RmtRunning;
+            if (!mapFinished)
+            {
+                RmtRunning = false;
+                remainingTime = 0;
+                //TODO: goto hub
+            }
+            semaphoreSlim.Release();
+            if (wasRMTRunning)
+            {
+                scoreboardVisible = true;
+                await SetTmScoreboardVisibility(false);
+            }
             await UpdateView();
         }
 

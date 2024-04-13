@@ -6,7 +6,7 @@
 - Show who pressed the force button(s)
 - Quit and Quit Voting buttons
 - Seperate the single template into 3 sepearate templates
-- Handle time running out
+- ~~Handle time running out~~
 - Allow setting the hub map (voting?)
 - Allow setting RMT difficulty
   - Win can be set to AT / Gold / Silver / Bronze
