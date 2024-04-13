@@ -189,12 +189,15 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         private async Task UpdateView(string playerLogin = null)
         {
-            var compiler = new Compiler()
-                .AddKey("DisplayWelcome", !RmtRunning && !scoreboardVisible)
-                //.AddKey("DisplayWelcome", false)
-                .AddKey("DisplayScore", RmtRunning && !scoreboardVisible)
-                .AddKey("DisplayScoreboard", scoreboardVisible)
-                //.AddKey("DisplayScore", true)
+            string xml = null;
+            if (!RmtRunning && !scoreboardVisible)
+            {
+                xml = new Compiler()
+                    .CompileXml("Templates/startrmt.xml");
+            }
+            else if (RmtRunning && !scoreboardVisible)
+            {
+                xml = new Compiler()
                 .AddKey("wins", winScore)
                 .AddKey("skips", goodSkipScore)
                 .AddKey("badSkips", badSkipScore)
@@ -204,10 +207,20 @@ namespace TrackmaniaRandomMapServer.RmtService
                 .AddKey("CanForceSkip", CanForceSkip())
                 .AddKey("CanQuit", CanVoteQuit())
                 .AddKey("CanForceQuit", CanForceQuit())
+                .CompileXml("Templates/rmtwidget.xml");
+            }
+            else if (scoreboardVisible)
+            {
+                xml = new Compiler()
+                .AddKey("wins", winScore)
+                .AddKey("skips", goodSkipScore)
                 .AddKey("Scoreboard", playerStateService.GetLeaderboard().ToArray())
-                .AddKey("time_left", $"{remainingTime / 60:D2}:{remainingTime % 60:D2}");
+                .AddKey("time_left", $"{remainingTime / 60:D2}:{remainingTime % 60:D2}")
+                .CompileXml("Templates/scoreboard.xml");
+            }
+            if (xml is null)
+                return;
 
-            var xml = compiler.CompileXml("template.xml");
             if (playerLogin is null)
             {
                 await tmClient.SendDisplayManialinkPageAsync(xml, 0, false);

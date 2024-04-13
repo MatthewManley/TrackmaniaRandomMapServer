@@ -4,8 +4,8 @@
   - Show best times for each player on last map
   - Display who got AT/Gold on the last map (just as chat message is easy win)
 - Show who pressed the force button(s)
-- Quit and Quit Voting buttons
-- Seperate the single template into 3 sepearate templates
+- ~~Quit and Quit Voting buttons~~
+- ~~Seperate the single template into 3 sepearate templates~~
 - ~~Handle time running out~~
 - Allow setting the hub map (voting?)
 - Allow setting RMT difficulty

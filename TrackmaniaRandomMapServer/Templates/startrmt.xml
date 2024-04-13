@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<manialink version="3">
+	<frame pos="-155 85" size="60 20">
+		<quad pos="0 0" size="60 20" z-index="0" bgcolor="10101070"/>
+		<label pos="30 -2" z-index="1" text="Welcome to Ohio RMT" textsize="3.5" textfont="RajdhaniMono" halign="center"/>
+		<label pos="30 -10" size="30 5" z-index="1" text="Start RMT" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmall" id="rmt_stop_btn" scriptevents="1" action="StartRMT" />
+	</frame>
+</manialink>

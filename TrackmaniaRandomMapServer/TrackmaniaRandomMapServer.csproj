@@ -16,8 +16,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="template.xml">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		<None Update="Templates\rmtwidget.xml">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Templates\scoreboard.xml">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Templates\startrmt.xml">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 
