@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Threading.Tasks;
 using TrackmaniaRandomMapServer;
+using TrackmaniaRandomMapServer.RmtService;
 
 internal class Program
 {

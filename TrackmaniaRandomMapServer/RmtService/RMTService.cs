@@ -7,15 +7,19 @@ using Newtonsoft.Json;
 using SuperXML;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TrackmaniaRandomMapServer.Events;
 
-namespace TrackmaniaRandomMapServer
+namespace TrackmaniaRandomMapServer.RmtService
 {
-    public class RMTService : BackgroundService
+    public partial class RMTService : BackgroundService
     {
         private readonly RMTOptions rmtOptions;
         private readonly TrackmaniaRemoteClient tmClient;
@@ -25,7 +29,7 @@ namespace TrackmaniaRandomMapServer
         private bool RmtRunning = false;
         private bool mapFinished = false;
         private string goldCredit = null;
-        private int? mapStartTime = null;
+        private DateTime? mapStartTime = null;
         private int remainingTime = 60 * 60;
         private int winScore = 0;
         private int skipScore = 0;
@@ -35,6 +39,21 @@ namespace TrackmaniaRandomMapServer
         private ManiaplanetMap currentMap = null;
         private SemaphoreSlim semaphoreSlim = new(1, 1);
 
+        private int VotesNeeded => (int)Math.Floor(ConnectedPlayers.Where(x => !x.Value.IsSpectator).Count() / 2d);
+        private int GoldSkipVotes => ConnectedPlayers.Values.Count(x => !x.IsSpectator && x.VoteGoldSkip);
+        private int SkipVotes => ConnectedPlayers.Values.Count(x => !x.IsSpectator && x.VoteSkip);
+        private int QuitVotes => ConnectedPlayers.Values.Count(x => !x.IsSpectator && x.VoteQuit);
+
+        private bool CanGoldSkip => goldCredit is not null;
+        private bool CanForceGoldSkip => CanGoldSkip && GoldSkipVotes > VotesNeeded;
+
+        private bool CanSkip => !CanGoldSkip;
+        private bool CanForceSkip => CanSkip && SkipVotes > VotesNeeded;
+
+        private bool CanQuit => true;
+        private bool CanForceQuit => CanQuit && QuitVotes > VotesNeeded;
+
+
         public RMTService(IOptions<RMTOptions> rmtOptions, TmxRestClient tmxRestClient)
         {
             this.rmtOptions = rmtOptions.Value;
@@ -42,13 +61,23 @@ namespace TrackmaniaRandomMapServer
             this.tmxRestClient = tmxRestClient;
         }
 
+        public async Task<PlayerState> GetPlayerState(string login)
+        {
+            if (!ConnectedPlayers.TryGetValue(login, out var playerState))
+            {
+                var info = await tmClient.GetPlayerInfoAsync(login);
+                playerState = new PlayerState()
+                {
+                    NickName = info.NickName,
+                    IsSpectator = info.SpectatorStatus == 0
+                };
+                ConnectedPlayers[login] = playerState;
+            }
+            return playerState;
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            //var dataDir = Directory.GetDirectories("/data/");
-            //var userDataDir = Directory.GetDirectories("/data/UserData");
-            //var mapsDir = Directory.GetDirectories("/data/UserData/Maps");
-            //var rmtDir = Directory.GetDirectories("/data/UserData/Maps/RMT");
-
             tmClient.OnWaypoint += Client_OnWaypoint;
             tmClient.OnModeScriptCallback += Client_OnModeScriptCallback;
             tmClient.OnPlayerManialinkPageAnswer += Client_OnPlayerManialinkPageAnswer;
@@ -59,6 +88,7 @@ namespace TrackmaniaRandomMapServer
             tmClient.OnStartMapEnd += Client_OnStartMapEnd;
             tmClient.OnEndMapEnd += Client_OnEndMapEnd;
             tmClient.OnEndMapStart += Client_OnEndMapStart;
+            tmClient.OnPlayerChat += TmClient_OnPlayerChat;
 
             if (!await tmClient.LoginAsync(rmtOptions.Username, rmtOptions.Password))
             {
@@ -84,7 +114,7 @@ namespace TrackmaniaRandomMapServer
             var players = await tmClient.GetPlayerListAsync();
             foreach (var item in players)
             {
-                ConnectedPlayers.Add(item.Login, new PlayerState { NickName = item.NickName });
+                ConnectedPlayers.Add(item.Login, new PlayerState { NickName = item.NickName, IsSpectator = item.SpectatorStatus != 0 });
             }
 
             //var test = await trackmaniaRemoteClient.TriggerModeScriptEventArrayAsync("Common.UIModules.GetProperties");
@@ -108,26 +138,29 @@ namespace TrackmaniaRandomMapServer
             }
 
             var winTime = currentMap.GoldTime;
-            var skipTime = currentMap.SilverTime;
+            var skipTime = currentMap.BronzeTime;
 
             if (e.RaceTime <= winTime)
             {
                 mapFinished = true;
                 goldCredit = null;
+                winScore += 1;
 
-                var diffTime = e.Time - mapStartTime.Value;
-                remainingTime -= diffTime / 1000;
+                var diffTime = DateTime.UtcNow - mapStartTime.Value;
+                remainingTime -= (int)diffTime.TotalSeconds;
                 mapStartTime = null;
 
                 semaphoreSlim.Release();
-
                 await UpdateView();
                 await AdvanceMap();
             }
-            else if (e.RaceTime <= skipTime)
+            else if (e.RaceTime <= skipTime && goldCredit is null)
             {
                 goldCredit = e.Login;
                 semaphoreSlim.Release();
+                await UpdateView();
+                var playerState = await GetPlayerState(e.Login);
+                await tmClient.ChatSendServerMessageAsync($"{playerState.NickName ?? e.Login} got the first Gold Medal, gold skip is now available");
             }
             else
             {
@@ -139,7 +172,7 @@ namespace TrackmaniaRandomMapServer
         {
             try
             {
-                ConnectedPlayers.Remove(e.Login);
+                ConnectedPlayers[e.Login].IsSpectator = true;
                 return Task.CompletedTask;
             }
             catch (Exception ex)
@@ -158,6 +191,12 @@ namespace TrackmaniaRandomMapServer
                 //.AddKey("DisplayScore", true)
                 .AddKey("wins", winScore)
                 .AddKey("skips", skipScore)
+                .AddKey("CanGoldSkip", CanGoldSkip)
+                .AddKey("CanForceGoldSkip", CanForceGoldSkip)
+                .AddKey("CanSkip", CanSkip)
+                .AddKey("CanForceSkip", CanForceSkip)
+                .AddKey("CanQuit", CanQuit)
+                .AddKey("CanForceQuit", CanForceQuit)
                 .CompileXml("template.xml");
             if (playerLogin is null)
             {
@@ -167,6 +206,18 @@ namespace TrackmaniaRandomMapServer
             {
                 await tmClient.SendDisplayManialinkPageToLoginAsync(playerLogin, xml, 0, false);
             }
+        }
+
+        private async Task CancelAllVotes()
+        {
+            await semaphoreSlim.WaitAsync();
+            foreach (var item in ConnectedPlayers.Values)
+            {
+                item.VoteGoldSkip = false;
+                item.VoteSkip = false;
+                item.VoteQuit = false;
+            }
+            semaphoreSlim.Release();
         }
 
         private async Task Client_OnEndMapStart(object sender, ManiaplanetEndMap e) => await SetTmScoreboardVisibility(false);
@@ -198,7 +249,6 @@ namespace TrackmaniaRandomMapServer
 
         private async Task Client_OnStartMapEnd(object sender, ManiaplanetStartMap e)
         {
-            await SetTmScoreboardVisibility(true);
             await semaphoreSlim.WaitAsync();
             if (!RmtRunning)
             {
@@ -213,6 +263,7 @@ namespace TrackmaniaRandomMapServer
 
             await UpdateView();
             await SetRemainingTime(remainingTime);
+            await SetTmScoreboardVisibility(true);
         }
 
         private async Task Client_OnStartline(object sender, TrackmaniaStartline e)
@@ -223,7 +274,7 @@ namespace TrackmaniaRandomMapServer
                 semaphoreSlim.Release();
                 return;
             }
-            mapStartTime = e.Time;
+            mapStartTime = DateTime.UtcNow;
             semaphoreSlim.Release();
         }
 
@@ -231,17 +282,13 @@ namespace TrackmaniaRandomMapServer
         {
             try
             {
-                if (ConnectedPlayers.TryGetValue(e.PlayerInfo.Login, out var playerState))
+                if (!ConnectedPlayers.TryGetValue(e.PlayerInfo.Login, out var playerState))
                 {
-                    playerState.NickName = e.PlayerInfo.NickName;
+                    playerState = new PlayerState();
+                    ConnectedPlayers[e.PlayerInfo.Login] = playerState;
                 }
-                else
-                {
-                    ConnectedPlayers[e.PlayerInfo.Login] = new PlayerState()
-                    {
-                        NickName = e.PlayerInfo.NickName,
-                    };
-                }
+                playerState.NickName = e.PlayerInfo.NickName;
+                playerState.IsSpectator = e.PlayerInfo.SpectatorStatus == 0;
                 return Task.CompletedTask;
             }
             catch (Exception ex)
@@ -255,7 +302,10 @@ namespace TrackmaniaRandomMapServer
         {
             try
             {
-                ConnectedPlayers[e.Login] = null;
+                ConnectedPlayers[e.Login] = new PlayerState()
+                {
+                    IsSpectator = e.IsSpectator,
+                };
                 await UpdateView(e.Login);
             }
             catch (Exception ex)
@@ -265,67 +315,6 @@ namespace TrackmaniaRandomMapServer
             }
         }
 
-        private async Task Client_OnPlayerManialinkPageAnswer(object sender, ManiaLinkPageActionGbxEventArgs e)
-        {
-            if (!ConnectedPlayers.TryGetValue(e.Login, out var playerState))
-            {
-                var info = await tmClient.GetPlayerInfoAsync(e.Login);
-                playerState = new PlayerState()
-                {
-                    NickName = info.NickName
-                };
-                ConnectedPlayers[e.Login] = playerState;
-            }
-            try
-            {
-                Console.WriteLine($"Manialink page answer: {e.Login} {e.Answer}");
-                switch (e.Answer)
-                {
-                    case "StartRMT":
-                        {
-                            await semaphoreSlim.WaitAsync();
-                            if (RmtRunning)
-                            {
-                                semaphoreSlim.Release();
-                                return;
-                            }
-
-                            RmtRunning = true;
-                            semaphoreSlim.Release();
-
-                            await UpdateView();
-                            await AdvanceMap();
-                            await SetRemainingTime(60 * 60);
-                            break;
-                        }
-                    case "VoteGoldSkip":
-                        {
-                            await semaphoreSlim.WaitAsync();
-                            if (goldCredit is null)
-                            {
-                                playerState.VoteGoldSkip = !playerState.VoteGoldSkip;
-                                if (playerState.VoteGoldSkip)
-                                {
-                                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} canceled their vote to Gold Skip");
-                                }
-                                else
-                                {
-                                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} voted to Gold Skip");
-                                }
-                            }
-                            semaphoreSlim.Release();
-                            break;
-                        }
-                    default:
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                throw;
-            }
-        }
 
         private async Task AdvanceMap()
         {

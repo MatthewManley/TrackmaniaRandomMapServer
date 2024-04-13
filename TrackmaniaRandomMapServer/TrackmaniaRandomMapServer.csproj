@@ -5,7 +5,6 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 		<UserSecretsId>da3cf941-4962-4d2f-8c71-8776d2a843d3</UserSecretsId>
-		<DockerfileRunArguments>-v "Z:\trackmania\UserData:/data"</DockerfileRunArguments>
 	</PropertyGroup>
 
 	<ItemGroup>

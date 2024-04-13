@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <manialink version="3">
-	<frame sxIf="DisplayWelcome" pos="-100 80" size="60 20">
+	<frame sxIf="DisplayWelcome" pos="-155 85" size="60 20">
 		<quad pos="0 0" size="60 20" z-index="0" bgcolor="10101070"/>
-		<label pos="30 -2" z-index="1" text="Welcome to Ohio RMT" textsize="3.5" textfont="RajdhaniMono" halign="center" />
+		<label pos="30 -2" z-index="1" text="Welcome to Ohio RMT" textsize="3.5" textfont="RajdhaniMono" halign="center"/>
 		<label pos="30 -10" size="30 5" z-index="1" text="Start RMT" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmall" id="rmt_stop_btn" scriptevents="1" action="StartRMT" />
 	</frame>
 	<frame sxIf="DisplayScore" pos="-155 85" size="62 31">
@@ -11,11 +11,11 @@
 		<label pos="21 -3.2" z-index="1" text="{{wins}}" textsize="3.5" textfont="RajdhaniMono" halign="center" />
 		<quad pos="32 -1" size="10 10" z-index="1" style="MedalsBig" substyle="MedalGold" autoscale="1" keepratio="Fit"/>
 		<label pos="52 -3.2" z-index="1" text="{{skips}}" textsize="3.5" textfont="RajdhaniMono" halign="center" />
-		<label pos="15 -12" z-index="1" text="Vote Gold Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="VoteGoldSkip"/>
-		<label pos="15 -18" z-index="1" text="Vote Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="VoteSkip" />
-		<label pos="15 -24" z-index="1" text="Vote Quit" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="VoteQuit" />
-		<label pos="45 -12" z-index="1" text="Force Gold Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceGoldSkip" bgcolor="00A565FF"/>
-		<label pos="45 -18" z-index="1" text="Force Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceSkip" bgcolor="00A565FF"/>
-		<label pos="45 -24" z-index="1" text="Force Quit" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceQuit" bgcolor="00A565FF"/>
+		<label sxIf="CanGoldSkip" pos="15 -18" z-index="1" text="Vote Gold Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="VoteGoldSkip"/>
+		<label sxIf="CanSkip" pos="15 -18" z-index="1" text="Vote Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="VoteSkip" />
+		<label sxIf="CanQuit" pos="15 -12" z-index="1" text="Vote Quit" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="VoteQuit" />
+		<label sxIf="CanForceGoldSkip" pos="45 -18" z-index="1" text="Force Gold Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceGoldSkip" bgcolor="00A565FF"/>
+		<label sxIf="CanForceSkip" pos="45 -18" z-index="1" text="Force Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceSkip" bgcolor="00A565FF"/>
+		<label sxIf="CanForceQuit" pos="45 -12" z-index="1" text="Force Quit" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceQuit" bgcolor="00A565FF"/>
 	</frame>
 </manialink>
