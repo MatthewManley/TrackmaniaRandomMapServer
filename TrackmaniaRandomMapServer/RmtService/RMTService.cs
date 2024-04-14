@@ -8,15 +8,9 @@ using Newtonsoft.Json;
 using SuperXML;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
-using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
 using TrackmaniaRandomMapServer.Events;
 using TrackmaniaRandomMapServer.Models;
 
@@ -43,8 +37,11 @@ namespace TrackmaniaRandomMapServer.RmtService
         private int badSkipScore = 0;
 
         private string nextMap = null;
+        private TmxMap nextMapDetails = null;
+        private TmxMap currentMapDetails = null;
         private ManiaplanetMap currentMap = null;
         private SemaphoreSlim semaphoreSlim = new(1, 1);
+        private SemaphoreSlim downloadSemaphor = new(1, 1);
 
         public RMTService(ILogger<RMTService> logger, IOptions<RMTOptions> rmtOptions, TmxRestClient tmxRestClient, PlayerStateService playerStateService)
         {
@@ -73,6 +70,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             tmClient.OnPlayerDisconnect += Client_OnPlayerDisconnect;
             tmClient.OnStartline += Client_OnStartline;
             tmClient.OnStartMapEnd += Client_OnStartMapEnd;
+            tmClient.OnStartMapStart += TmClient_OnStartMapStart;
             tmClient.OnEndMapEnd += Client_OnEndMapEnd;
             tmClient.OnEndMapStart += Client_OnEndMapStart;
             tmClient.OnPlayerChat += TmClient_OnPlayerChat;
@@ -87,7 +85,13 @@ namespace TrackmaniaRandomMapServer.RmtService
                 logger.LogInformation("Logged in");
             }
 
-            await DownloadRandomMap();
+            var success = false;
+            while (!success)
+            {
+                await downloadSemaphor.WaitAsync();
+                success = await DownloadRandomMap();
+                downloadSemaphor.Release();
+            }
 
             await tmClient.EnableCallbackTypeAsync(GbxCallbackType.Checkpoints | GbxCallbackType.Internal | GbxCallbackType.ModeScript);
 
@@ -129,8 +133,8 @@ namespace TrackmaniaRandomMapServer.RmtService
             }
 
             //TODO: Fetch from some sort of setting
-            var winTime = currentMap.GoldTime;
-            var skipTime = currentMap.BronzeTime;
+            var winTime = currentMap.AuthorTime;
+            var skipTime = currentMap.GoldTime;
 
             var playerState = playerStateService.GetPlayerState(e.Login);
 
@@ -153,6 +157,7 @@ namespace TrackmaniaRandomMapServer.RmtService
 
                 logger.LogTrace("Client_OnWaypoint exit semaphor");
                 semaphoreSlim.Release();
+                await tmClient.ChatSendServerMessageAsync($"{playerState.NickName ?? e.Login} got AT Medal!");
                 await UpdateView();
                 await AdvanceMap();
             }
@@ -201,7 +206,6 @@ namespace TrackmaniaRandomMapServer.RmtService
                 xml = new Compiler()
                 .AddKey("wins", winScore)
                 .AddKey("skips", goodSkipScore)
-                .AddKey("badSkips", badSkipScore)
                 .AddKey("CanGoldSkip", CanVoteGoldSkip())
                 .AddKey("CanForceGoldSkip", CanForceGoldSkip())
                 .AddKey("CanSkip", CanVoteSkip())
@@ -212,10 +216,12 @@ namespace TrackmaniaRandomMapServer.RmtService
             }
             else if (scoreboardVisible)
             {
+                var leaderboard = playerStateService.GetLeaderboard().ToArray();
                 xml = new Compiler()
                 .AddKey("wins", winScore)
                 .AddKey("skips", goodSkipScore)
-                .AddKey("Scoreboard", playerStateService.GetLeaderboard().ToArray())
+                .AddKey("badSkips", badSkipScore)
+                .AddKey("Scoreboard", leaderboard)
                 .AddKey("time_left", $"{remainingTime / 60:D2}:{remainingTime % 60:D2}")
                 .CompileXml("Templates/scoreboard.xml");
             }
@@ -280,6 +286,20 @@ namespace TrackmaniaRandomMapServer.RmtService
             var test = await tmClient.TriggerModeScriptEventArrayAsync("Common.UIModules.SetProperties", param);
         }
 
+        private async Task TmClient_OnStartMapStart(object sender, ManiaplanetStartMap e)
+        {
+            if (currentMapDetails is not null)
+            {
+                await tmClient.ChatSendServerMessageAsync($"Map Details: {currentMapDetails.Name} by {currentMapDetails.Username}");
+                var tags = currentMapDetails.Tags.Split(',');
+                var hasIceTag = tags.Contains("14") || tags.Contains("44");
+                if (currentMapDetails.UpdatedAt.Date <= new DateTime(2022, 10, 1) && hasIceTag)
+                {
+                    await tmClient.ChatSendServerMessageAsync("Possible Prepatch Ice Map");
+                }
+            }
+        }
+
         private async Task Client_OnStartMapEnd(object sender, ManiaplanetStartMap e)
         {
             await semaphoreSlim.WaitAsync();
@@ -294,6 +314,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             mapFinished = false;
             goldCredit = null;
             currentMap = e.Map;
+            playerStateService.ClearBestTimes();
             logger.LogTrace("Client_OnStartMapEnd exit semaphor");
             semaphoreSlim.Release();
 
@@ -322,7 +343,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 var playerState = playerStateService.GetPlayerState(e.PlayerInfo.Login);
                 playerState.NickName = e.PlayerInfo.NickName;
-                playerState.IsSpectator = e.PlayerInfo.SpectatorStatus == 0;
+                playerState.IsSpectator = e.PlayerInfo.SpectatorStatus != 0;
                 return Task.CompletedTask;
             }
             catch (Exception ex)
@@ -350,26 +371,51 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         private async Task AdvanceMap()
         {
-            if (nextMap is null)
+            try
             {
-                await DownloadRandomMap();
+                logger.LogTrace("ONE");
+                var allMaps = await tmClient.GetMapListAsync(100, 0);
+                logger.LogInformation("TWO");
+                await tmClient.InsertMapAsync(nextMap);
+                logger.LogInformation("THREE");
+                await tmClient.RemoveMapListAsync(allMaps.Select(x => x.FileName).ToArray());
+                logger.LogInformation("FOUR");
+                await tmClient.NextMapAsync();
+                logger.LogInformation("FIVE");
+
+                await downloadSemaphor.WaitAsync();
+                var success = false;
+                while (!success)
+                {
+                    success = await DownloadRandomMap();
+                }
+                downloadSemaphor.Release();
             }
-
-            var allMaps = await tmClient.GetMapListAsync(100, 0);
-            await tmClient.InsertMapAsync(nextMap);
-            await tmClient.RemoveMapListAsync(allMaps.Select(x => x.FileName).ToArray());
-            await tmClient.NextMapAsync();
-
-            await DownloadRandomMap();
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in AdvanceMap");
+                throw;
+            }
         }
 
-        private async Task DownloadRandomMap()
+        private async Task<bool> DownloadRandomMap()
         {
-            var tmp = await tmxRestClient.GetRandomMap();
-            var (nMap, mapData) = await tmxRestClient.DownloadMap(tmp);
-            var dataObj = new GbxBase64(mapData);
-            await tmClient.WriteFileAsync(nMap, dataObj);
-            nextMap = nMap;
+            try
+            {
+                currentMapDetails = nextMapDetails;
+                var tmp = await tmxRestClient.GetRandomMap();
+                var (nMap, mapData) = await tmxRestClient.DownloadMap(tmp);
+                var dataObj = new GbxBase64(mapData);
+                await tmClient.WriteFileAsync(nMap, dataObj);
+                nextMap = nMap;
+                nextMapDetails = tmp;
+                return true;
+            }
+            catch (Exception)
+            {
+                logger.LogWarning("FAILED TO DOWNLOAD MAP");
+                return false;
+            }
         }
 
         private async Task SetRemainingTime(int time)

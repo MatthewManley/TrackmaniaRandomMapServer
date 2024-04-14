@@ -31,7 +31,7 @@ internal class Program
             {
                 client.ConfigureHttpClient(httpClient =>
                 {
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", "Trackmania Random Map Server");
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", "TM RMT - https%3A%2F%2Fgithub.com%2FMatthewManley%2FTrackmaniaRandomMapServer");
                 });
             });
             var section = hostContext.Configuration.GetSection("RMT");

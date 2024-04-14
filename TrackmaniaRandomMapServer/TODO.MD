@@ -1,8 +1,8 @@
 ﻿- Improve Scoreboard
-  - Add Number of Skips used to board
-  - Show number of gold medals each player has won
-  - Show best times for each player on last map
-  - Display who got AT/Gold on the last map (just as chat message is easy win)
+  - ~~Add Number of Skips used to board~~
+  - ~~Show number of gold medals each player has won~~
+  - ~~Show best times for each player on last map~~
+  - ~~Display who got AT/Gold on the last map (just as chat message is easy win)~~
 - Show who pressed the force button(s)
 - ~~Quit and Quit Voting buttons~~
 - ~~Seperate the single template into 3 sepearate templates~~
@@ -16,3 +16,9 @@
   - Extend the player voted server message to include total players
 - Reset best map times when a map ends
 - Ohio branding on templates
+- ~~Add prepatch ice notification~~
+- BUG - Player scores not clear at end of game
+- BUG - Quiting keeps showing the scoreboard
+- BUG - Sometimes votes stick around (after AT?)
+- Show number of skips used on the widget
+- Show date of when the map was published / updated

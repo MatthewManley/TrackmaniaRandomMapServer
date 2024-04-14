@@ -2,6 +2,7 @@
 <manialink version="3">
 	<frame pos="-80 80" size="160 160" z-idex="3">
 		<quad pos="0 0" size="160 160"  bgcolor="101010EE"/>
+		<label pos="5 -155" size="155 5" textsize="5" text="Skips: {{badSkips}}" textfont="RajdhaniMono" valign="center" halign="left"/>
 		<frame pos="20 -5" size="120 50" z-idex="4">
 			<label pos="60 -5" size="60 10" text="RMT SCORE" textsize="10"
 				   halign="center" valign="center" style="ManiaPlanetLogos" />
@@ -14,12 +15,19 @@
 		<frame pos="20 -50" size="120 100" z-idex="4">
 			<frame sxRepeat="player in Scoreboard" pos="0 {{ -10 * $index }}" size="120 10">
 				<quad pos="0 0" size="120 10" bgcolor="eeeeeeFF"/>
-				<quad pos="1 -0.5" size="99 9" bgcolor="513877FF"/>
-				<quad pos="100 -0.5" size="19 9" bgcolor="333333FF"/>
-				<label pos="55 -4.5" size="55 9" text="{{player.DisplayName}}" textsize="3.5" textfont="RajdhaniMono"
-								   halign="center" valign="center" />
-				<label pos="105 -4.5" size="10 9" text="{{player.NumWins}}" textsize="3.5" textfont="RajdhaniMono"
+				<quad pos="1 -0.5" size="90 9" bgcolor="513877FF"/>
+				<quad pos="90 -0.5" size="15 9" bgcolor="005142FF"/>
+				<quad pos="105 -0.5" size="14.5 9" bgcolor="B59232FF"/>
+				<quad pos="90 0" size="0.5 10" bgcolor="eeeeeeFF"/>
+				<quad pos="105 0" size="0.5 10" bgcolor="eeeeeeFF"/>
+				<label pos="3 -4.5" size="55 9" text="{{player.DisplayName}}" textsize="3.5" textfont="RajdhaniMono"
 								   halign="left" valign="center" />
+				<label pos="88 -4.5" size="55 9" text="{{player.BestTime}}" textsize="3.5" textfont="RajdhaniMono"
+								   halign="right" valign="center" />
+				<label pos="97.5 -4.5" text="{{player.NumWins}}" textsize="3.5" textfont="RajdhaniMono"
+								   halign="center" valign="center"/>
+				<label pos="112.5 -4.5" text="{{player.GoodSkips}}" textsize="3.5" textfont="RajdhaniMono"
+								   halign="center" valign="center" />
 			</frame>
 		</frame>
 	</frame>
