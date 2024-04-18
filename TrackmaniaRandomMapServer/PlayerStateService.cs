@@ -61,6 +61,15 @@ namespace TrackmaniaRandomMapServer
             }
         }
 
+        public void ClearPlayerScores()
+        {
+            foreach (var ps in playerStates.Values)
+            {
+                ps.GoodSkips = 0;
+                ps.NumWins = 0;
+            }
+        }
+
         public void ClearBestTimes()
         {
             foreach (var playerState in playerStates.Values)
@@ -86,22 +95,11 @@ namespace TrackmaniaRandomMapServer
 
         public IEnumerable<LeaderboardItem> GetLeaderboard()
         {
-            //var fakePlayers = new List<KeyValuePair<string, PlayerState>>
-            //{
-            //    new("FakePlayer1", new PlayerState { NumWins = 1, BestMapTime = 123456, GoodSkips = 2 }),
-            //    new("FakePlayer2", new PlayerState { NumWins = 10, BestMapTime = 234567, GoodSkips = 1 }),
-            //    new("FakePlayer3", new PlayerState { NumWins = 3, BestMapTime = 345678, GoodSkips = 10 }),
-            //    new("FakePlayer4", new PlayerState { NumWins = 4, BestMapTime = 456789, GoodSkips = 3 }),
-            //    new("FakePlayer5", new PlayerState { NumWins = 5, BestMapTime = 567890, GoodSkips = 4 }),
-            //    new("FakePlayer6", new PlayerState { NumWins = 6, BestMapTime = 678901, GoodSkips = 5 }),
-            //    new("FakePlayer7", new PlayerState { NumWins = 7, BestMapTime = 789012, GoodSkips = 6 }),
-            //    new("FakePlayer8", new PlayerState { NumWins = 8, BestMapTime = 890123, GoodSkips = 7 }),
-            //    new("FakePlayer9", new PlayerState { NumWins = 9, BestMapTime = 901234, GoodSkips = 8 }),
-            //    new("FakePlayer10", new PlayerState { NumWins = 2, BestMapTime = 101234, GoodSkips = 9 }),
-            //};
-            return playerStates.Where(x => x.Value.NumWins > 0 || x.Value.GoodSkips > 0 || x.Value.BestMapTime is not null)
+            return playerStates
+                .Where(x => !x.Value.IsSpectator || x.Value.NumWins > 0 || x.Value.GoodSkips > 0 || x.Value.BestMapTime.HasValue)
                 .OrderByDescending(x => x.Value.NumWins)
                 .ThenByDescending(x => x.Value.GoodSkips)
+                .ThenByDescending(x => x.Value.BestMapTime.HasValue ? 1 : 0)
                 .ThenBy(x => x.Value.BestMapTime)
                 .Take(10)
                 .Select(x => new LeaderboardItem
@@ -109,16 +107,16 @@ namespace TrackmaniaRandomMapServer
                     DisplayName = x.Value.NickName ?? x.Key,
                     NumWins = x.Value.NumWins,
                     GoodSkips = x.Value.GoodSkips,
-                    BestTime = FormatTime(x.Value.BestMapTime ?? 0),
-            });
+                    BestTime = FormatTime(x.Value.BestMapTime),
+                });
         }
-}
-
-static class PlayerStateServiceExtensions
-{
-    public static IEnumerable<PlayerState> ExcludeSpectators(this IEnumerable<PlayerState> playerStates)
-    {
-        return playerStates.Where(x => !x.IsSpectator);
     }
-}   
+
+    static class PlayerStateServiceExtensions
+    {
+        public static IEnumerable<PlayerState> ExcludeSpectators(this IEnumerable<PlayerState> playerStates)
+        {
+            return playerStates.Where(x => !x.IsSpectator);
+        }
+    }
 }

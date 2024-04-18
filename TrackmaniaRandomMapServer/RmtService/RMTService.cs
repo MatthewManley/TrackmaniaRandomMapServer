@@ -18,6 +18,9 @@ namespace TrackmaniaRandomMapServer.RmtService
 {
     public partial class RMTService : BackgroundService
     {
+        private Difficulty winDifficulty = Difficulty.Author;
+        private Difficulty goodSkipDifficulty = Difficulty.Gold;
+
         private readonly RMTOptions rmtOptions;
         private readonly TrackmaniaRemoteClient tmClient;
         private readonly ILogger<RMTService> logger;
@@ -112,6 +115,25 @@ namespace TrackmaniaRandomMapServer.RmtService
             await Task.Delay(-1);
         }
 
+        private int TimeForDifficulty(ManiaplanetMap map, Difficulty difficulty)
+        {
+            switch (difficulty)
+            {
+                case Difficulty.Bronze:
+                    return map.BronzeTime;
+                case Difficulty.Silver:
+                    return map.SilverTime;
+                case Difficulty.Gold:
+                    return map.GoldTime;
+                case Difficulty.Finish:
+                    return int.MaxValue;
+                case Difficulty.Author:
+                    return map.AuthorTime;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
         /// <summary>
         /// Executed anytime a player goes through a checkpoint or a finish line
         /// We only care about the finish line and throw away other events
@@ -133,8 +155,8 @@ namespace TrackmaniaRandomMapServer.RmtService
             }
 
             //TODO: Fetch from some sort of setting
-            var winTime = currentMap.AuthorTime;
-            var skipTime = currentMap.GoldTime;
+            int winTime = TimeForDifficulty(currentMap, winDifficulty);
+            int skipTime = TimeForDifficulty(currentMap, goodSkipDifficulty);
 
             var playerState = playerStateService.GetPlayerState(e.Login);
 
@@ -241,20 +263,22 @@ namespace TrackmaniaRandomMapServer.RmtService
         private async Task Client_OnEndMapStart(object sender, ManiaplanetEndMap e)
         {
             await semaphoreSlim.WaitAsync();
-            bool wasRMTRunning = RmtRunning;
+            bool finishRmt = false;
             if (!mapFinished)
             {
                 RmtRunning = false;
-                remainingTime = 0;
+                finishRmt = true;
+                remainingTime = 60*60;
                 //TODO: goto hub
             }
             semaphoreSlim.Release();
-            if (wasRMTRunning)
-            {
-                scoreboardVisible = true;
-                await SetTmScoreboardVisibility(false);
-            }
+            scoreboardVisible = true;
+            await SetTmScoreboardVisibility(false);
             await UpdateView();
+            if (finishRmt)
+            {
+                await SetRemainingTime(60 * 60);
+            }
         }
 
         private async Task Client_OnEndMapEnd(object sender, ManiaplanetEndMap e)

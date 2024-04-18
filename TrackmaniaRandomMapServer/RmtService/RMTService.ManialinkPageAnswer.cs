@@ -54,9 +54,9 @@ namespace TrackmaniaRandomMapServer.RmtService
                 {
                     logger.LogTrace("OnForceQuit exit semaphor");
                     RmtRunning = false;
+                    remainingTime = 60 * 60;
                     semaphoreSlim.Release();
-                    scoreboardVisible = true;
-                    await SetTmScoreboardVisibility(false);
+                    await SetRemainingTime(60 * 60);
                     await UpdateView();
                     await tmClient.RestartMapAsync();
                     
@@ -204,6 +204,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 RmtRunning = true;
                 scoreboardVisible = false;
                 playerStateService.CancelAllVotes();
+                playerStateService.ClearBestTimes();
                 goldCredit = null;
                 mapStartTime = null;
                 remainingTime = 60 * 60;
