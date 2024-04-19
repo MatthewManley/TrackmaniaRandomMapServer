@@ -12,5 +12,7 @@
 		<label sxIf="CanForceGoldSkip" pos="45 -18" z-index="1" text="Force Gold Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceGoldSkip" bgcolor="00A565FF"/>
 		<label sxIf="CanForceSkip" pos="45 -18" z-index="1" text="Force Skip" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceSkip" bgcolor="00A565FF"/>
 		<label sxIf="CanForceQuit" pos="45 -12" z-index="1" text="Force Quit" textsize="2.5" textfont="RajdhaniMono" halign="center" style="CardButtonSmallS" scriptevents="1" action="ForceQuit" bgcolor="00A565FF"/>
+		<label pos="45 -30" z-index="1" text="Skips: {{badSkips}}" textsize="1.5" textfont="RajdhaniMono" halign="left" valign="bottom"/>
+		<label pos="2 -30" z-index="1" text="Published: {{publishDate}}" textsize="1.5" textfont="RajdhaniMono" halign="left" valign="bottom"/>
 	</frame>
 </manialink>

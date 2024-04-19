@@ -7,18 +7,19 @@
 - ~~Quit and Quit Voting buttons~~
 - ~~Seperate the single template into 3 sepearate templates~~
 - ~~Handle time running out~~
-- Allow setting the hub map (voting?)
+- Allow setting the hub map (voting? / admins only?)
 - Allow setting RMT difficulty
   - Win can be set to AT / Gold / Silver / Bronze
   - Skip can be set to Gold / Silver / Bronze / Finish
 - Allow setting RMT duration 
 - If all players vote for something, don't wait for a player to hit the force button
   - Extend the player voted server message to include total players
-- Reset best map times when a map ends
+- ~~Reset best map times when a map ends~~
 - Ohio branding on templates
 - ~~Add prepatch ice notification~~
-- BUG - Player scores not clear at end of game
-- BUG - Quiting keeps showing the scoreboard
+- ~~BUG - Player scores not clear at end of game~~
+- ~~BUG - Quiting keeps showing the scoreboard~~
 - BUG - Sometimes votes stick around (after AT?)
 - Show number of skips used on the widget
 - Show date of when the map was published / updated
+- Widget that links to the discord?

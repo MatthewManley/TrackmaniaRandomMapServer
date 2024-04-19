@@ -234,6 +234,8 @@ namespace TrackmaniaRandomMapServer.RmtService
                 .AddKey("CanForceSkip", CanForceSkip())
                 .AddKey("CanQuit", CanVoteQuit())
                 .AddKey("CanForceQuit", CanForceQuit())
+                .AddKey("badSkips", badSkipScore)
+                .AddKey("publishDate", currentMapDetails?.UpdatedAt.ToString("MM/dd/yy") ?? "" )
                 .CompileXml("Templates/rmtwidget.xml");
             }
             else if (scoreboardVisible)

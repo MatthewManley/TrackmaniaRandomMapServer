@@ -205,6 +205,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 scoreboardVisible = false;
                 playerStateService.CancelAllVotes();
                 playerStateService.ClearBestTimes();
+                playerStateService.ClearPlayerScores();
                 goldCredit = null;
                 mapStartTime = null;
                 remainingTime = 60 * 60;
