@@ -19,26 +19,26 @@ namespace TrackmaniaRandomMapServer.RmtService
                     await OnVoteSkip(e.Login);
                     break;
                 case "ForceSkip":
-                    await OnForceSkip();
+                    await OnForceSkip(e.Login);
                     break;
                 case "VoteGoldSkip":
                     await OnVoteGoldSkip(e.Login);
                     break;
                 case "ForceGoldSkip":
-                    await OnForceGoldSkip();
+                    await OnForceGoldSkip(e.Login);
                     break;
                 case "VoteQuit":
                     await OnVoteQuit(e.Login);
                     break;
                 case "ForceQuit":
-                    await OnForceQuit();
+                    await OnForceQuit(e.Login);
                     break;
                 default:
                     break;
             }
         }
 
-        private async Task OnForceQuit()
+        private async Task OnForceQuit(string login)
         {
             try
             {
@@ -52,20 +52,22 @@ namespace TrackmaniaRandomMapServer.RmtService
                 }
                 if (CanForceQuit())
                 {
-                    logger.LogTrace("OnForceQuit exit semaphor");
+                    var player = playerStateService.GetPlayerState(login);
                     RmtRunning = false;
                     remainingTime = 60 * 60;
+                    playerStateService.CancelAllVotes();
+                    logger.LogTrace("OnForceQuit exit semaphor");
                     semaphoreSlim.Release();
                     await SetRemainingTime(60 * 60);
                     await UpdateView();
                     await tmClient.RestartMapAsync();
-                    
+                    await tmClient.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force Quit.");
                 }
                 else
                 {
                     logger.LogTrace("OnForceQuit exit semaphor");
                     semaphoreSlim.Release();
-                    await tmClient.ChatSendServerMessageAsync($"Not enough votes to skip: {playerStateService.QuitVotes()}/{MinimumVotes()}");
+                    await tmClient.ChatSendToLoginAsync($"Not enough votes to skip: {playerStateService.QuitVotes()}/{MinimumVotes()}", login);
                 }
             }
             catch (Exception ex)
@@ -109,7 +111,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             }
         }
 
-        private async Task OnForceGoldSkip()
+        private async Task OnForceGoldSkip(string login)
         {
             try
             {
@@ -124,6 +126,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 var playerState = playerStateService.GetPlayerState(goldCredit);
                 if (CanForceGoldSkip())
                 {
+                    var player = playerStateService.GetPlayerState(login);
                     playerState.GoodSkips += 1;
                     mapFinished = true;
                     goldCredit = null;
@@ -139,6 +142,7 @@ namespace TrackmaniaRandomMapServer.RmtService
 
                     await UpdateView();
                     await AdvanceMap();
+                    await tmClient.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force Gold Skip.");
                 }
                 else
                 {
@@ -261,7 +265,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             }
         }
 
-        private async Task OnForceSkip()
+        private async Task OnForceSkip(string login)
         {
             try
             {
@@ -275,6 +279,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 }
                 if (CanForceSkip())
                 {
+                    var player = playerStateService.GetPlayerState(login);
                     mapFinished = true;
                     badSkipScore += 1;
 
@@ -288,12 +293,13 @@ namespace TrackmaniaRandomMapServer.RmtService
 
                     await UpdateView();
                     await AdvanceMap();
+                    await tmClient.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force Skip.");
                 }
                 else
                 {
                     logger.LogTrace("OnForceSkip exit semaphor");
                     semaphoreSlim.Release();
-                    await tmClient.ChatSendServerMessageAsync($"Not enough votes to skip: {playerStateService.SkipVotes()}/{MinimumVotes()}");
+                    await tmClient.ChatSendServerMessageToLoginAsync($"Not enough votes to skip: {playerStateService.SkipVotes()}/{MinimumVotes()}", login);
                 }
             }
             catch (Exception ex)

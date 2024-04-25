@@ -72,7 +72,6 @@ namespace TrackmaniaRandomMapServer.RmtService
             tmClient.OnPlayerInfoChanged += Client_OnPlayerInfoChanged;
             tmClient.OnPlayerDisconnect += Client_OnPlayerDisconnect;
             tmClient.OnStartline += Client_OnStartline;
-            tmClient.OnStartMapEnd += Client_OnStartMapEnd;
             tmClient.OnStartMapStart += TmClient_OnStartMapStart;
             tmClient.OnEndMapEnd += Client_OnEndMapEnd;
             tmClient.OnEndMapStart += Client_OnEndMapStart;
@@ -314,20 +313,6 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         private async Task TmClient_OnStartMapStart(object sender, ManiaplanetStartMap e)
         {
-            if (currentMapDetails is not null)
-            {
-                await tmClient.ChatSendServerMessageAsync($"Map Details: {currentMapDetails.Name} by {currentMapDetails.Username}");
-                var tags = currentMapDetails.Tags.Split(',');
-                var hasIceTag = tags.Contains("14") || tags.Contains("44");
-                if (currentMapDetails.UpdatedAt.Date <= new DateTime(2022, 10, 1) && hasIceTag)
-                {
-                    await tmClient.ChatSendServerMessageAsync("Possible Prepatch Ice Map");
-                }
-            }
-        }
-
-        private async Task Client_OnStartMapEnd(object sender, ManiaplanetStartMap e)
-        {
             await semaphoreSlim.WaitAsync();
             logger.LogTrace("Client_OnStartMapEnd enter semaphor");
             if (!RmtRunning)
@@ -346,6 +331,17 @@ namespace TrackmaniaRandomMapServer.RmtService
 
             await UpdateView();
             await SetRemainingTime(remainingTime);
+
+            if (currentMapDetails is not null)
+            {
+                //await tmClient.ChatSendServerMessageAsync($"Map Details: {currentMapDetails.Name} by {currentMapDetails.Username}");
+                var tags = currentMapDetails.Tags.Split(',');
+                var hasIceTag = tags.Contains("14") || tags.Contains("44");
+                if (currentMapDetails.UpdatedAt.Date <= new DateTime(2022, 10, 1) && hasIceTag)
+                {
+                    await tmClient.ChatSendServerMessageAsync("Possible Prepatch Ice Map");
+                }
+            }
         }
 
         private async Task Client_OnStartline(object sender, TrackmaniaStartline e)

@@ -30,7 +30,7 @@ namespace TrackmaniaRandomMapServer
             {
 
                 var uriBuilder = new UriBuilder();
-                uriBuilder.Host = "trackmania.exchange";
+                uriBuilder.Host = "map-monitor.xk.io";
                 uriBuilder.Scheme = "https";
                 uriBuilder.Path = "/mapsearch2/search";
                 uriBuilder.Query = "?api=on&random=1&lengthop=1&length=9&etags=23,46,40,41,42,37";
@@ -50,7 +50,7 @@ namespace TrackmaniaRandomMapServer
         public async Task<(string, byte[])> DownloadMap(TmxMap tmxMap)
         {
             var uriBuilder = new UriBuilder();
-            uriBuilder.Host = "trackmania.exchange";
+            uriBuilder.Host = "map-monitor.xk.io";
             uriBuilder.Scheme = "https";
             uriBuilder.Path = $"/maps/download/{tmxMap.TrackID}";
             var resultResponse = await httpClient.GetAsync(uriBuilder.Uri);
