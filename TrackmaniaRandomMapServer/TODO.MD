@@ -9,6 +9,7 @@
 
 - HIGH PRIORITY - Allow setting the hub map (voting? / admins only?)
 - HIGH PRIORITY - Post RMT results/updates to discord
+- Don't deduct time or count as a skip if a prepatch ice map is skipped
 - Allow setting RMT difficulty
   - Win can be set to AT / Gold / Silver / Bronze
   - Skip can be set to Gold / Silver / Bronze / Finish

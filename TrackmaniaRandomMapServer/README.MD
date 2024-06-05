@@ -1,0 +1,1 @@
+﻿# Trackmania Random Map Server

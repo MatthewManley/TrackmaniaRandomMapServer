@@ -33,6 +33,12 @@ namespace TrackmaniaRandomMapServer
             return playerStates.Values.ExcludeSpectators().Count(x => x.VoteQuit);
         }
 
+        public string GetLoginFromDisplayName(string displayName)
+        {
+            var lower = displayName.ToLower();
+            return playerStates.FirstOrDefault(x => x.Value.NickName.ToLower() == lower).Key;
+        }
+
         public PlayerState GetPlayerState(string login)
         {
             if (!playerStates.TryGetValue(login, out var playerState))
@@ -78,16 +84,16 @@ namespace TrackmaniaRandomMapServer
             }
         }
 
-        public string PlayerNames()
+        public IEnumerable<KeyValuePair<string, PlayerState>> Players()
         {
-            return string.Join(", ", playerStates.Select(kvp => kvp.Value.NickName ?? kvp.Key));
+            return playerStates.Select(x => x);
         }
 
         private string FormatTime(int? time)
         {
             if (time is null)
             {
-                return "--:--.--";
+                return "--:--.---";
             }
             var ts = TimeSpan.FromMilliseconds(time.Value);
             return $"{ts.Minutes:D2}:{ts.Seconds:D2}.{ts.Milliseconds:D3}";
@@ -101,7 +107,6 @@ namespace TrackmaniaRandomMapServer
                 .ThenByDescending(x => x.Value.GoodSkips)
                 .ThenByDescending(x => x.Value.BestMapTime.HasValue ? 1 : 0)
                 .ThenBy(x => x.Value.BestMapTime)
-                .Take(10)
                 .Select(x => new LeaderboardItem
                 {
                     DisplayName = x.Value.NickName ?? x.Key,

@@ -1,18 +1,23 @@
-﻿using GbxRemoteNet.Enums;
+﻿using Discord.Webhook;
+using GbxRemoteNet;
+using GbxRemoteNet.Enums;
 using GbxRemoteNet.Events;
-using GbxRemoteNet.XmlRpc.ExtraTypes;
+using ManiaTemplates;
+using ManiaTemplates.Lib;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using SuperXML;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using TrackmaniaRandomMapServer.Events;
 using TrackmaniaRandomMapServer.Models;
+using TrackmaniaRandomMapServer.Options;
+using TrackmaniaRandomMapServer.Storage;
 
 namespace TrackmaniaRandomMapServer.RmtService
 {
@@ -23,14 +28,15 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         private readonly RMTOptions rmtOptions;
         private readonly TrackmaniaRemoteClient tmClient;
+        private readonly IStorageHandler storageHandler;
+        private readonly DiscordWebhookClient discordWebhookClient;
         private readonly ILogger<RMTService> logger;
         private readonly TmxRestClient tmxRestClient;
         private readonly PlayerStateService playerStateService;
+        private ManiaTemplateEngine templateEngine;
 
-        // Game State
-        private bool RmtRunning = false;
-        private bool scoreboardVisible = false;
-        private bool mapFinished = false;
+        // Game State s
+        private RmtPosition rmtPosition = RmtPosition.NotStartedHub;
         private string goldCredit = null;
         private DateTime? mapStartTime = null;
         private int remainingTime = 60 * 60;
@@ -46,19 +52,32 @@ namespace TrackmaniaRandomMapServer.RmtService
         private SemaphoreSlim semaphoreSlim = new(1, 1);
         private SemaphoreSlim downloadSemaphor = new(1, 1);
 
-        public RMTService(ILogger<RMTService> logger, IOptions<RMTOptions> rmtOptions, TmxRestClient tmxRestClient, PlayerStateService playerStateService)
+        private Assembly ExecutingAssembly = Assembly.GetExecutingAssembly();
+        private IEnumerable<Assembly> assemblies;
+
+
+        public RMTService(ILogger<RMTService> logger,
+                          IOptions<RMTOptions> rmtOptions,
+                          TmxRestClient tmxRestClient,
+                          PlayerStateService playerStateService,
+                          TrackmaniaRemoteClient trackmaniaRemoteClient,
+                          IStorageHandler storageHandler,
+                          DiscordWebhookClient discordWebhookClient)
         {
             this.rmtOptions = rmtOptions.Value;
-            tmClient = new TrackmaniaRemoteClient(this.rmtOptions.IpAddress, this.rmtOptions.Port);
+            this.tmClient = trackmaniaRemoteClient;
+            this.storageHandler = storageHandler;
+            this.discordWebhookClient = discordWebhookClient;
             this.logger = logger;
             this.tmxRestClient = tmxRestClient;
             this.playerStateService = playerStateService;
+            assemblies = [ExecutingAssembly];
         }
 
         public int MinimumVotes() => (int)Math.Ceiling(playerStateService.CurrentPlayerCount() / 2d);
-        public bool CanVoteSkip() => goldCredit is null;
-        public bool CanVoteGoldSkip() => goldCredit is not null;
-        public bool CanVoteQuit() => true;
+        public bool CanVoteSkip() => goldCredit is null && (rmtPosition == RmtPosition.Preround || rmtPosition == RmtPosition.InRound);
+        public bool CanVoteGoldSkip() => goldCredit is not null && (rmtPosition == RmtPosition.Preround || rmtPosition == RmtPosition.InRound);
+        public bool CanVoteQuit() => rmtPosition == RmtPosition.Preround || rmtPosition == RmtPosition.InRound;
         private bool CanForceSkip() => CanVoteSkip() && playerStateService.SkipVotes() >= MinimumVotes();
         public bool CanForceGoldSkip() => CanVoteGoldSkip() && playerStateService.GoldSkipVotes() >= MinimumVotes();
         private bool CanForceQuit() => CanVoteQuit() && playerStateService.QuitVotes() >= MinimumVotes();
@@ -76,6 +95,8 @@ namespace TrackmaniaRandomMapServer.RmtService
             tmClient.OnEndMapEnd += Client_OnEndMapEnd;
             tmClient.OnEndMapStart += Client_OnEndMapStart;
             tmClient.OnPlayerChat += TmClient_OnPlayerChat;
+
+            await SetupManialinkTemplateEngine();
 
             if (!await tmClient.LoginAsync(rmtOptions.Username, rmtOptions.Password))
             {
@@ -108,10 +129,33 @@ namespace TrackmaniaRandomMapServer.RmtService
                 playerStateService.UpsertPlayerState(item.Login, newPlayerState);
             }
 
-            await UpdateView();
-            await SetTmScoreboardVisibility(true);
+            var multicall = new TmMultiCall();
+            await UpdateView(multicall);
+            SetTmScoreboardVisibility(multicall, true);
+
+            await tmClient.MultiCallAsync(multicall);
 
             await Task.Delay(-1);
+        }
+
+        private async Task SetupManialinkTemplateEngine()
+        {
+            var resources = ExecutingAssembly.GetManifestResourceNames();
+            var templates = resources.Where(x => x.StartsWith("TrackmaniaRandomMapServer.Manialinks.Templates"));
+            var scripts = resources.Where(x => x.StartsWith("TrackmaniaRandomMapServer.Manialinks.Scripts"));
+            templateEngine = new ManiaTemplateEngine();
+
+            foreach (var item in templates)
+            {
+                var content = await Helper.GetEmbeddedResourceContentAsync(item, ExecutingAssembly);
+                templateEngine.AddManiaScriptFromString(item, content);
+            }
+
+            foreach (var item in templates)
+            {
+                templateEngine.LoadTemplateFromEmbeddedResource(item);
+                await templateEngine.PreProcessAsync(item, assemblies);
+            }
         }
 
         private int TimeForDifficulty(ManiaplanetMap map, Difficulty difficulty)
@@ -146,7 +190,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 return;
             await semaphoreSlim.WaitAsync();
             logger.LogTrace("Client_OnWaypoint enter semaphor");
-            if (!RmtRunning || mapFinished)
+            if (rmtPosition != RmtPosition.InRound)
             {
                 logger.LogTrace("Client_OnWaypoint exit semaphor");
                 semaphoreSlim.Release();
@@ -167,7 +211,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             // Player got the required medal to win the map
             if (e.RaceTime <= winTime)
             {
-                mapFinished = true;
+                rmtPosition = RmtPosition.PostRound;
                 goldCredit = null;
                 winScore += 1;
                 playerState.NumWins += 1;
@@ -178,8 +222,15 @@ namespace TrackmaniaRandomMapServer.RmtService
 
                 logger.LogTrace("Client_OnWaypoint exit semaphor");
                 semaphoreSlim.Release();
-                await tmClient.ChatSendServerMessageAsync($"{playerState.NickName ?? e.Login} got AT Medal!");
-                await UpdateView();
+
+                var message = $"Got AT on map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\nCredit: {playerState.NickName ?? e.Login}\n";
+                message += LeaderboardToString();
+                _ = discordWebhookClient.SendMessageAsync(message);
+
+                var multicall = new TmMultiCall();
+                multicall.ChatSendServerMessageAsync($"{playerState.NickName ?? e.Login} got {winDifficulty.DisplayName()} Medal!");
+                await UpdateView(multicall);
+                await tmClient.MultiCallAsync(multicall);
                 await AdvanceMap();
             }
 
@@ -189,8 +240,11 @@ namespace TrackmaniaRandomMapServer.RmtService
                 goldCredit = e.Login;
                 logger.LogTrace("Client_OnWaypoint exit semaphor");
                 semaphoreSlim.Release();
-                await UpdateView();
-                await tmClient.ChatSendServerMessageAsync($"{playerState.NickName ?? e.Login} got the first Gold Medal, gold skip is now available");
+                var multicall = new TmMultiCall();
+                await UpdateView(multicall);
+                var medalName = goodSkipDifficulty.DisplayName();
+                multicall.ChatSendServerMessageAsync($"{playerState.NickName ?? e.Login} got the first {medalName} Medal, {medalName} skip is now available");
+                await tmClient.MultiCallAsync(multicall);
             }
             else
             {
@@ -214,82 +268,107 @@ namespace TrackmaniaRandomMapServer.RmtService
             }
         }
 
-        private async Task UpdateView(string playerLogin = null)
+        private async Task<TmMultiCall> UpdateView(TmMultiCall multicall, string playerLogin = null)
         {
             string xml = null;
-            if (!RmtRunning && !scoreboardVisible)
+            if (rmtPosition == RmtPosition.NotStartedHub)
             {
-                xml = new Compiler()
-                    .CompileXml("Templates/startrmt.xml");
+                xml = await templateEngine.RenderAsync("TrackmaniaRandomMapServer.Manialinks.Templates.startrmt.mt", new { }, assemblies);
             }
-            else if (RmtRunning && !scoreboardVisible)
+            else if (rmtPosition == RmtPosition.Preround || rmtPosition == RmtPosition.InRound)
             {
-                xml = new Compiler()
-                .AddKey("wins", winScore)
-                .AddKey("skips", goodSkipScore)
-                .AddKey("CanGoldSkip", CanVoteGoldSkip())
-                .AddKey("CanForceGoldSkip", CanForceGoldSkip())
-                .AddKey("CanSkip", CanVoteSkip())
-                .AddKey("CanForceSkip", CanForceSkip())
-                .AddKey("CanQuit", CanVoteQuit())
-                .AddKey("CanForceQuit", CanForceQuit())
-                .AddKey("badSkips", badSkipScore)
-                .AddKey("publishDate", currentMapDetails?.UpdatedAt.ToString("MM/dd/yy") ?? "" )
-                .CompileXml("Templates/rmtwidget.xml");
+                xml = await templateEngine.RenderAsync("TrackmaniaRandomMapServer.Manialinks.Templates.rmtwidget.mt", new
+                {
+                    Wins = winScore,
+                    GoodSkips = goodSkipScore,
+                    BadSkips = badSkipScore,
+                    CanGoldSkip = CanVoteGoldSkip(),
+                    CanSkip = CanVoteSkip(),
+                    CanQuit = CanVoteQuit(),
+                    CanForceGoldSkip = CanForceGoldSkip(),
+                    CanForceSkip = CanForceSkip(),
+                    CanForceQuit = CanForceQuit(),
+                    PublishDate = currentMapDetails?.UpdatedAt.ToString("MM/dd/yy"),
+                    WinMedal = winDifficulty.MedalString(),
+                    GoodSkipMedal = goodSkipDifficulty.MedalString(),
+                    GoodSkipMedalName = goodSkipDifficulty.DisplayName(),
+                }, assemblies);
             }
-            else if (scoreboardVisible)
+            else if (rmtPosition == RmtPosition.PostRound || rmtPosition == RmtPosition.EndedScoreboard)
             {
-                var leaderboard = playerStateService.GetLeaderboard().ToArray();
-                xml = new Compiler()
-                .AddKey("wins", winScore)
-                .AddKey("skips", goodSkipScore)
-                .AddKey("badSkips", badSkipScore)
-                .AddKey("Scoreboard", leaderboard)
-                .AddKey("time_left", $"{remainingTime / 60:D2}:{remainingTime % 60:D2}")
-                .CompileXml("Templates/scoreboard.xml");
+                xml = await templateEngine.RenderAsync("TrackmaniaRandomMapServer.Manialinks.Templates.scoreboard.mt", new
+                {
+                    Wins = winScore,
+                    GoodSkips = goodSkipScore,
+                    BadSkips = badSkipScore,
+                    TimeLeft = $"{remainingTime / 60:D2}:{remainingTime % 60:D2}",
+                    Players = playerStateService.GetLeaderboard().Take(10).ToArray(),
+                    WinMedal = winDifficulty.MedalString(),
+                    GoodSkipMedal = goodSkipDifficulty.MedalString(),
+                    WinColor = winDifficulty.HexColor(),
+                    GoodSkipColor = goodSkipDifficulty.HexColor(),
+                }, assemblies);
             }
             if (xml is null)
-                return;
+                return multicall;
 
             if (playerLogin is null)
             {
-                await tmClient.SendDisplayManialinkPageAsync(xml, 0, false);
+                multicall.SendHideManialinkPageAsync();
+                multicall.SendDisplayManialinkPageAsync(xml, 0, false);
             }
             else
             {
-                await tmClient.SendDisplayManialinkPageToLoginAsync(playerLogin, xml, 0, false);
+                multicall.SendDisplayManialinkPageToLoginAsync(playerLogin, xml, 0, false);
             }
+            return multicall;
         }
 
         private async Task Client_OnEndMapStart(object sender, ManiaplanetEndMap e)
         {
             await semaphoreSlim.WaitAsync();
             bool finishRmt = false;
-            if (!mapFinished)
+            if (rmtPosition != RmtPosition.PostRound && rmtPosition != RmtPosition.StartedHub)
             {
-                RmtRunning = false;
+                rmtPosition = RmtPosition.EndedScoreboard;
                 finishRmt = true;
-                remainingTime = 60*60;
+                remainingTime = 60 * 60;
                 //TODO: goto hub
             }
             semaphoreSlim.Release();
-            scoreboardVisible = true;
-            await SetTmScoreboardVisibility(false);
-            await UpdateView();
+            var multicall = new TmMultiCall();
+
             if (finishRmt)
             {
-                await SetRemainingTime(60 * 60);
+                var message = $"RMT ended on map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\n";
+                message += LeaderboardToString();
+                _ = discordWebhookClient.SendMessageAsync(message);
             }
+
+            SetTmScoreboardVisibility(multicall, false);
+            await UpdateView(multicall);
+            if (finishRmt)
+            {
+                await SetRemainingTime(multicall, 60 * 60);
+            }
+            await tmClient.MultiCallAsync(multicall);
         }
 
         private async Task Client_OnEndMapEnd(object sender, ManiaplanetEndMap e)
         {
-            scoreboardVisible = false;
-            await SetTmScoreboardVisibility(true);
-            await UpdateView();
+            await semaphoreSlim.WaitAsync();
+            if (rmtPosition == RmtPosition.EndedScoreboard)
+            {
+                rmtPosition = RmtPosition.NotStartedHub;
+            }
+            semaphoreSlim.Release();
+            var multicall = new TmMultiCall();
+            SetTmScoreboardVisibility(multicall, true);
+            await UpdateView(multicall);
+            await tmClient.MultiCallAsync(multicall);
         }
 
-        private async Task SetTmScoreboardVisibility(bool visible)
+        private MultiCall SetTmScoreboardVisibility(TmMultiCall multicall, bool visible)
         {
             var uimodules = new SetUiModules();
             uimodules.UiModules = new List<UiModule>()
@@ -308,29 +387,31 @@ namespace TrackmaniaRandomMapServer.RmtService
                 }
             };
             var param = JsonConvert.SerializeObject(uimodules);
-            var test = await tmClient.TriggerModeScriptEventArrayAsync("Common.UIModules.SetProperties", param);
+            return multicall.TriggerModeScriptEventArrayAsync("Common.UIModules.SetProperties", param);
         }
 
         private async Task TmClient_OnStartMapStart(object sender, ManiaplanetStartMap e)
         {
             await semaphoreSlim.WaitAsync();
             logger.LogTrace("Client_OnStartMapEnd enter semaphor");
-            if (!RmtRunning)
+            if (rmtPosition != RmtPosition.PostRound && rmtPosition != RmtPosition.StartedHub)
             {
                 logger.LogTrace("Client_OnStartMapEnd exit semaphor");
                 semaphoreSlim.Release();
                 return;
             }
 
-            mapFinished = false;
+            rmtPosition = RmtPosition.Preround;
             goldCredit = null;
             currentMap = e.Map;
             playerStateService.ClearBestTimes();
+            playerStateService.CancelAllVotes();
             logger.LogTrace("Client_OnStartMapEnd exit semaphor");
             semaphoreSlim.Release();
 
-            await UpdateView();
-            await SetRemainingTime(remainingTime);
+            var multicall = new TmMultiCall();
+            await UpdateView(multicall);
+            await SetRemainingTime(multicall, remainingTime);
 
             if (currentMapDetails is not null)
             {
@@ -339,21 +420,23 @@ namespace TrackmaniaRandomMapServer.RmtService
                 var hasIceTag = tags.Contains("14") || tags.Contains("44");
                 if (currentMapDetails.UpdatedAt.Date <= new DateTime(2022, 10, 1) && hasIceTag)
                 {
-                    await tmClient.ChatSendServerMessageAsync("Possible Prepatch Ice Map");
+                    multicall.ChatSendServerMessageAsync("Possible Prepatch Ice Map");
                 }
             }
+            await tmClient.MultiCallAsync(multicall);
         }
 
         private async Task Client_OnStartline(object sender, TrackmaniaStartline e)
         {
             await semaphoreSlim.WaitAsync();
             logger.LogTrace("Client_OnStartline enter semaphor");
-            if (!RmtRunning || mapStartTime != null)
+            if (rmtPosition != RmtPosition.Preround)
             {
                 logger.LogTrace("Client_OnStartline exit semaphor");
                 semaphoreSlim.Release();
                 return;
             }
+            rmtPosition = RmtPosition.InRound;
             mapStartTime = DateTime.UtcNow;
             logger.LogTrace("Client_OnStartline exit semaphor");
             semaphoreSlim.Release();
@@ -381,7 +464,9 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 var ps = playerStateService.GetPlayerState(e.Login);
                 ps.IsSpectator = e.IsSpectator;
-                await UpdateView(e.Login);
+                var multicall = new TmMultiCall();
+                await UpdateView(multicall, e.Login);
+                await tmClient.MultiCallAsync(multicall);
             }
             catch (Exception ex)
             {
@@ -395,15 +480,13 @@ namespace TrackmaniaRandomMapServer.RmtService
         {
             try
             {
-                logger.LogTrace("ONE");
                 var allMaps = await tmClient.GetMapListAsync(100, 0);
-                logger.LogInformation("TWO");
-                await tmClient.InsertMapAsync(nextMap);
-                logger.LogInformation("THREE");
-                await tmClient.RemoveMapListAsync(allMaps.Select(x => x.FileName).ToArray());
-                logger.LogInformation("FOUR");
-                await tmClient.NextMapAsync();
-                logger.LogInformation("FIVE");
+
+                var multicall = new TmMultiCall();
+                multicall.InsertMapAsync(nextMap);
+                multicall.RemoveMapListAsync(allMaps.Select(x => x.FileName).ToArray());
+                multicall.NextMapAsync();
+                await tmClient.MultiCallAsync(multicall);
 
                 await downloadSemaphor.WaitAsync();
                 var success = false;
@@ -426,43 +509,44 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 currentMapDetails = nextMapDetails;
                 var tmp = await tmxRestClient.GetRandomMap();
-                var (nMap, mapData) = await tmxRestClient.DownloadMap(tmp);
-                var dataObj = new GbxBase64(mapData);
-                await tmClient.WriteFileAsync(nMap, dataObj);
-                nextMap = nMap;
+                var filename = $"RMT/{tmp.TrackID}.Map.Gbx";
+                // If we can't check for file existance or the file doesn't exist, download it
+                if (!storageHandler.CanExists || !await storageHandler.Exists(filename, CancellationToken.None))
+                {
+                    var stream = await tmxRestClient.DownloadMap(tmp);
+                    await storageHandler.Write(filename, stream, CancellationToken.None);
+                }
+                nextMap = filename;
                 nextMapDetails = tmp;
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                logger.LogWarning("FAILED TO DOWNLOAD MAP");
+                //logger.LogWarning("FAILED TO DOWNLOAD MAP");
+                logger.LogError(ex, "FAILED TO DOWNLOAD MAP");
                 return false;
             }
         }
 
-        private async Task SetRemainingTime(int time)
+        private async Task<TmMultiCall> SetRemainingTime(TmMultiCall multicall, int time)
         {
             var settings = await tmClient.GetModeScriptSettingsAsync();
             settings["S_TimeLimit"] = time;
-            await tmClient.SetModeScriptSettingsAsync(settings);
+            return multicall.SetModeScriptSettingsAsync(settings);
         }
 
-        private async Task Client_OnModeScriptCallback(string method, Newtonsoft.Json.Linq.JObject data)
+        private Task Client_OnModeScriptCallback(string method, Newtonsoft.Json.Linq.JObject data)
         {
             try
             {
                 logger.LogTrace($"Client_OnModeScriptCallback: {method}");
-                //var filename = $"{DateTime.Now:yyyyMMddHHmmssfff}_{method}.json";
-                //using (var writer = new StreamWriter(filename, false))
-                //{
-                //    await writer.WriteAsync(data.ToString());
-                //}
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error in Client_OnModeScriptCallback");
                 throw;
             }
+            return Task.CompletedTask;
         }
     }
 }

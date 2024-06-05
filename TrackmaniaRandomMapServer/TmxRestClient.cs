@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using TrackmaniaRandomMapServer.Models;
+using TrackmaniaRandomMapServer.Options;
 
 namespace TrackmaniaRandomMapServer
 {
@@ -47,21 +48,14 @@ namespace TrackmaniaRandomMapServer
             }
         }
 
-        public async Task<(string, byte[])> DownloadMap(TmxMap tmxMap)
+        public async Task<Stream> DownloadMap(TmxMap tmxMap)
         {
             var uriBuilder = new UriBuilder();
             uriBuilder.Host = "map-monitor.xk.io";
             uriBuilder.Scheme = "https";
             uriBuilder.Path = $"/maps/download/{tmxMap.TrackID}";
             var resultResponse = await httpClient.GetAsync(uriBuilder.Uri);
-            var filename = $"RMT/{tmxMap.TrackID}.Map.Gbx";
-            //var filepath = Path.Combine("/data/UserData/Maps", filename);
-            var bytes = await resultResponse.Content.ReadAsByteArrayAsync();
-            //using (var fs = new FileStream(filepath, FileMode.CreateNew))
-            //{
-            //    await resultResponse.Content.CopyToAsync(fs);
-            //}
-            return (filename, bytes);
+            return await resultResponse.Content.ReadAsStreamAsync();
         }
     }
 }

@@ -1,8 +1,12 @@
 ﻿using GbxRemoteNet.Events;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Renci.SshNet.Messages;
 using System;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using TrackmaniaRandomMapServer.Models;
 
 namespace TrackmaniaRandomMapServer.RmtService
 {
@@ -44,7 +48,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 await semaphoreSlim.WaitAsync();
                 logger.LogTrace("OnForceQuit enter semaphor");
-                if (!RmtRunning)
+                if (rmtPosition == RmtPosition.NotStartedHub || rmtPosition == RmtPosition.EndedScoreboard)
                 {
                     logger.LogTrace("OnForceQuit exit semaphor");
                     semaphoreSlim.Release();
@@ -53,15 +57,17 @@ namespace TrackmaniaRandomMapServer.RmtService
                 if (CanForceQuit())
                 {
                     var player = playerStateService.GetPlayerState(login);
-                    RmtRunning = false;
+                    rmtPosition = RmtPosition.NotStartedHub;
                     remainingTime = 60 * 60;
                     playerStateService.CancelAllVotes();
                     logger.LogTrace("OnForceQuit exit semaphor");
                     semaphoreSlim.Release();
-                    await SetRemainingTime(60 * 60);
-                    await UpdateView();
-                    await tmClient.RestartMapAsync();
-                    await tmClient.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force Quit.");
+                    var multicall = new TmMultiCall();
+                    await SetRemainingTime(multicall, 60 * 60);
+                    await UpdateView(multicall);
+                    multicall.RestartMapAsync();
+                    multicall.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force Quit.");
+                    await tmClient.MultiCallAsync(multicall);
                 }
                 else
                 {
@@ -83,7 +89,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 await semaphoreSlim.WaitAsync();
                 logger.LogTrace("OnVoteQuit enter semaphor");
-                if (!RmtRunning || mapFinished)
+                if (rmtPosition == RmtPosition.NotStartedHub || rmtPosition == RmtPosition.EndedScoreboard)
                 {
                     logger.LogTrace("OnVoteQuit exit semaphor");
                     semaphoreSlim.Release();
@@ -94,15 +100,17 @@ namespace TrackmaniaRandomMapServer.RmtService
                 logger.LogTrace("OnVoteQuit exit semaphor");
                 semaphoreSlim.Release();
 
+                var multicall = new TmMultiCall();
                 if (playerState.VoteQuit)
                 {
-                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} voted to Quit RMT. {playerStateService.QuitVotes()}/{MinimumVotes()}");
+                    multicall.ChatSendServerMessageAsync($"{playerState.NickName} voted to Quit RMT. {playerStateService.QuitVotes()}/{MinimumVotes()}");
                 }
                 else
                 {
-                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} canceled their vote to Quit RMT. {playerStateService.QuitVotes()}/{MinimumVotes()}");
+                    multicall.ChatSendServerMessageAsync($"{playerState.NickName} canceled their vote to Quit RMT. {playerStateService.QuitVotes()}/{MinimumVotes()}");
                 }
-                await UpdateView();
+                await UpdateView(multicall);
+                await tmClient.MultiCallAsync(multicall);
             }
             catch (Exception ex)
             {
@@ -111,13 +119,29 @@ namespace TrackmaniaRandomMapServer.RmtService
             }
         }
 
+        private string LeaderboardToString()
+        {
+            StringBuilder builder = new();
+            var leaderboard = playerStateService.GetLeaderboard().ToList();
+            var maxNameLength = Math.Max(leaderboard.Max(x => x.DisplayName.Length), "Player".Length);
+            builder.AppendLine("```");
+            builder.Append("Player".PadRight(maxNameLength));
+            builder.AppendLine(" | Time      | AT | GO");
+            foreach (var item in leaderboard)
+            {
+                builder.AppendLine($"{item.DisplayName.PadRight(maxNameLength)} | {item.BestTime} | {item.NumWins,2} | {item.GoodSkips,2}");
+            }
+            builder.Append("```");
+            return builder.ToString();
+        }
+
         private async Task OnForceGoldSkip(string login)
         {
             try
             {
                 await semaphoreSlim.WaitAsync();
                 logger.LogTrace("OnForceGoldSkip enter semaphor");
-                if (!RmtRunning || mapFinished)
+                if (rmtPosition != RmtPosition.InRound && rmtPosition != RmtPosition.Preround)
                 {
                     logger.LogTrace("OnForceGoldSkip exit semaphor");
                     semaphoreSlim.Release();
@@ -128,7 +152,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 {
                     var player = playerStateService.GetPlayerState(login);
                     playerState.GoodSkips += 1;
-                    mapFinished = true;
+                    rmtPosition = RmtPosition.PostRound;
                     goldCredit = null;
                     goodSkipScore += 1;
 
@@ -140,9 +164,15 @@ namespace TrackmaniaRandomMapServer.RmtService
                     logger.LogTrace("OnForceGoldSkip exit semaphor");
                     semaphoreSlim.Release();
 
-                    await UpdateView();
+                    var message = $"Gold Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\nCredit: {playerState.NickName}\n";
+                    message += LeaderboardToString();
+                    _ = discordWebhookClient.SendMessageAsync(message);
+
+                    var multicall = new TmMultiCall();
+                    await UpdateView(multicall);
+                    multicall.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force {goodSkipDifficulty.DisplayName()} Skip.");
+                    await tmClient.MultiCallAsync(multicall);
                     await AdvanceMap();
-                    await tmClient.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force Gold Skip.");
                 }
                 else
                 {
@@ -164,7 +194,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 await semaphoreSlim.WaitAsync();
                 logger.LogTrace("OnVoteGoldSkip enter semaphor");
-                if (!RmtRunning || mapFinished)
+                if (rmtPosition != RmtPosition.Preround && rmtPosition != RmtPosition.InRound)
                 {
                     logger.LogTrace("OnVoteGoldSkip exit semaphor");
                     semaphoreSlim.Release();
@@ -175,15 +205,17 @@ namespace TrackmaniaRandomMapServer.RmtService
                 logger.LogTrace("OnVoteGoldSkip exit semaphor");
                 semaphoreSlim.Release();
 
+                var multicall = new TmMultiCall();
                 if (playerState.VoteGoldSkip)
                 {
-                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} voted to Gold Skip. {playerStateService.GoldSkipVotes()}/{MinimumVotes()}");
+                    multicall.ChatSendServerMessageAsync($"{playerState.NickName} voted to {goodSkipDifficulty.DisplayName()} Skip. {playerStateService.GoldSkipVotes()}/{MinimumVotes()}");
                 }
                 else
                 {
-                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} canceled their vote to Gold Skip. {playerStateService.GoldSkipVotes()}/{MinimumVotes()}");
+                    multicall.ChatSendServerMessageAsync($"{playerState.NickName} canceled their vote to {goodSkipDifficulty.DisplayName()} Skip. {playerStateService.GoldSkipVotes()}/{MinimumVotes()}");
                 }
-                await UpdateView();
+                await UpdateView(multicall);
+                await tmClient.MultiCallAsync(multicall);
             }
             catch (Exception ex)
             {
@@ -198,31 +230,32 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 await semaphoreSlim.WaitAsync();
                 logger.LogTrace("OnStartRMT enter semaphor");
-                if (RmtRunning)
+                if (rmtPosition != RmtPosition.NotStartedHub)
                 {
                     logger.LogTrace("OnStartRMT exit semaphor");
                     semaphoreSlim.Release();
                     return;
                 }
 
-                RmtRunning = true;
-                scoreboardVisible = false;
+                _ = discordWebhookClient.SendMessageAsync("An RMT round is starting!");
+
+                rmtPosition = RmtPosition.StartedHub;
                 playerStateService.CancelAllVotes();
                 playerStateService.ClearBestTimes();
                 playerStateService.ClearPlayerScores();
                 goldCredit = null;
                 mapStartTime = null;
                 remainingTime = 60 * 60;
-                mapFinished = true;
                 winScore = 0;
                 goodSkipScore = 0;
                 badSkipScore = 0;
 
                 logger.LogTrace("OnStartRMT exit semaphor");
                 semaphoreSlim.Release();
-
-                await SetRemainingTime(remainingTime);
-                await UpdateView();
+                var multicall = new TmMultiCall();
+                await SetRemainingTime(multicall, remainingTime);
+                await UpdateView(multicall);
+                await tmClient.MultiCallAsync(multicall);
                 await AdvanceMap();
             }
             catch (Exception ex)
@@ -238,7 +271,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 await semaphoreSlim.WaitAsync();
                 logger.LogTrace("OnVoteSkip enter semaphor");
-                if (!RmtRunning || mapFinished)
+                if (rmtPosition != RmtPosition.Preround && rmtPosition != RmtPosition.InRound)
                 {
                     logger.LogTrace("OnVoteSkip exit semaphor");
                     semaphoreSlim.Release();
@@ -248,15 +281,17 @@ namespace TrackmaniaRandomMapServer.RmtService
                 playerState.VoteSkip = !playerState.VoteSkip;
                 logger.LogTrace("OnVoteSkip exit semaphor");
                 semaphoreSlim.Release();
+                var multicall = new TmMultiCall();
                 if (playerState.VoteSkip)
                 {
-                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} voted to Skip. {playerStateService.SkipVotes()}/{MinimumVotes()}");
+                    multicall.ChatSendServerMessageAsync($"{playerState.NickName} voted to Skip. {playerStateService.SkipVotes()}/{MinimumVotes()}");
                 }
                 else
                 {
-                    await tmClient.ChatSendServerMessageAsync($"{playerState.NickName} canceled their vote to Skip. {playerStateService.SkipVotes()}/{MinimumVotes()}");
+                    multicall.ChatSendServerMessageAsync($"{playerState.NickName} canceled their vote to Skip. {playerStateService.SkipVotes()}/{MinimumVotes()}");
                 }
-                await UpdateView();
+                await UpdateView(multicall);
+                await tmClient.MultiCallAsync(multicall);
             }
             catch (Exception ex)
             {
@@ -271,7 +306,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 await semaphoreSlim.WaitAsync();
                 logger.LogTrace("OnForceSkip enter semaphor");
-                if (!RmtRunning || mapFinished)
+                if (rmtPosition != RmtPosition.Preround && rmtPosition != RmtPosition.InRound)
                 {
                     logger.LogTrace("OnForceSkip exit semaphor");
                     semaphoreSlim.Release();
@@ -280,20 +315,29 @@ namespace TrackmaniaRandomMapServer.RmtService
                 if (CanForceSkip())
                 {
                     var player = playerStateService.GetPlayerState(login);
-                    mapFinished = true;
+                    rmtPosition = RmtPosition.PostRound;
                     badSkipScore += 1;
 
-                    var diffTime = DateTime.UtcNow - mapStartTime.Value;
-                    remainingTime -= (int)diffTime.TotalSeconds;
-                    mapStartTime = null;
+                    if (mapStartTime.HasValue)
+                    {
+                        var diffTime = DateTime.UtcNow - mapStartTime.Value;
+                        remainingTime -= (int)diffTime.TotalSeconds;
+                        mapStartTime = null;
+                    }
 
                     playerStateService.CancelAllVotes();
                     logger.LogTrace("OnForceSkip exit semaphor");
                     semaphoreSlim.Release();
 
-                    await UpdateView();
+                    var message = $"Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\n";
+                    message += LeaderboardToString();
+                    _ = discordWebhookClient.SendMessageAsync(message);
+
+                    var multicall = new TmMultiCall();
+                    await UpdateView(multicall);
+                    multicall.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force Skip.");
+                    await tmClient.MultiCallAsync(multicall);
                     await AdvanceMap();
-                    await tmClient.ChatSendServerMessageAsync($"{player.NickName ?? login} clicked Force Skip.");
                 }
                 else
                 {
