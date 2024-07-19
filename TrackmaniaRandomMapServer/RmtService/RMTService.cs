@@ -478,27 +478,44 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         private async Task AdvanceMap()
         {
+            var allMaps;
             try
             {
-                var allMaps = await tmClient.GetMapListAsync(100, 0);
+                allMaps = await tmClient.GetMapListAsync(100, 0);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in AdvanceMap->GetMapListAsync");
+                throw;
+            }
 
+            try
+            {
                 var multicall = new TmMultiCall();
                 multicall.InsertMapAsync(nextMap);
                 multicall.RemoveMapListAsync(allMaps.Select(x => x.FileName).ToArray());
                 multicall.NextMapAsync();
                 await tmClient.MultiCallAsync(multicall);
-
-                await downloadSemaphor.WaitAsync();
-                var success = false;
-                while (!success)
-                {
-                    success = await DownloadRandomMap();
-                }
-                downloadSemaphor.Release();
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error in AdvanceMap");
+                logger.LogError(ex, "Error in AdvanceMap->MultiCallAsync");
+                throw;
+            }
+
+            await downloadSemaphor.WaitAsync();
+            bool success = false;
+            int failures = 0;
+            while (!success && failures < 100)
+            {
+                // DownloadRandomMap cannot throw errors
+                success = await DownloadRandomMap();
+                if (!success) failures++;
+            }
+            downloadSemaphor.Release();
+            if(!success)
+            {
+                logger.LogError(ex, "Unsuccessful AdvanceMap->DownloadRandomMap; failed " + failures + " times");
                 throw;
             }
         }
