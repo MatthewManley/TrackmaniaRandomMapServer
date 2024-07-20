@@ -29,5 +29,6 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v6
         with:
+          file: 'TrackmaniaRandomMapServer/Dockerfile'
           push: true
           tags: ${{ inputs.container_tag }}
