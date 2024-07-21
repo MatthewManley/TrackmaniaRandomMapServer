@@ -1,7 +1,9 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-USER app
+# having this enabled breaks the ability to write to the volume, technically decreases security
+# more info on why this should be enabled can be found here: https://devblogs.microsoft.com/dotnet/securing-containers-with-rootless/
+#USER app
 WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
