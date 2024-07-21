@@ -539,7 +539,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                     var stream = await tmxRestClient.DownloadMap(tmp);
                     await storageHandler.WriteMap(filename, stream, CancellationToken.None);
                 }
-                nextMap = filename;
+                nextMap = "RMT/" + filename;
                 nextMapDetails = tmp;
                 return true;
             }
