@@ -1,7 +1,6 @@
 ﻿using GbxRemoteNet.Events;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Renci.SshNet.Messages;
 using System;
 using System.Linq;
 using System.Text;

@@ -46,18 +46,14 @@ internal class Program
             var storageType = hostContext.Configuration.GetValue<string>("StorageType");
             switch (storageType?.ToUpperInvariant())
             {
-                case "SFTP":
-                    services.Configure<SftpOptions>(hostContext.Configuration.GetSection("Sftp"));
-                    services.AddHostedService<SftpHostService>();
-                    services.AddTransient<IStorageHandler, SftpStorageHandler>();
-                    break;
+                //case "SFTP":
+                //    services.Configure<SftpOptions>(hostContext.Configuration.GetSection("Sftp"));
+                //    services.AddHostedService<SftpHostService>();
+                //    services.AddTransient<IStorageHandler, SftpStorageHandler>();
+                //    break;
                 case "DIRECT":
-                    services.Configure<DirectStorageOptions>(hostContext.Configuration.GetSection("DirectStorage"));
-                    services.AddTransient<IStorageHandler, DirectStorageHandler>();
-                    break;
-                case "XMLRPC":
                 default:
-                    services.AddTransient<IStorageHandler, XmlRpcStorageHandler>();
+                    services.AddTransient<IStorageHandler, DirectStorageHandler>();
                     break;
             }
             services.AddSingleton((serviceProvider) =>

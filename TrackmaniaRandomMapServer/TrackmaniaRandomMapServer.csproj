@@ -7,6 +7,12 @@
 		<UserSecretsId>da3cf941-4962-4d2f-8c71-8776d2a843d3</UserSecretsId>
 	</PropertyGroup>
 
+
+	<PropertyGroup>
+		<DockerfileRunArguments>-v UserData:/server/UserData --network=trackmania</DockerfileRunArguments>
+	</PropertyGroup>
+
+
 	<ItemGroup>
 		<PackageReference Include="Discord.Net.Webhook" Version="3.15.0" />
 		<PackageReference Include="GbxRemote.Net" Version="5.0.2" />
@@ -15,18 +21,18 @@
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
-		<PackageReference Include="SSH.NET" Version="2024.0.0" />
+		<!--<PackageReference Include="SSH.NET" Version="2024.0.0" />-->
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Update="Manialinks\rmtwidget.xml">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="Manialinks\scoreboard.xml">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="Manialinks\startrmt.xml">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 

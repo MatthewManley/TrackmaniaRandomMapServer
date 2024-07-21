@@ -1,0 +1,37 @@
+﻿services:
+  trackmania_server:
+    image: evotm/trackmania:latest
+    container_name: trackmania_server
+    restart: unless-stopped
+    ports:
+      - 2350:2350/udp
+      - 2350:2350/tcp
+      - "5000:5000/tcp" # Do not expose this port to the internet!
+    environment:
+      MASTER_LOGIN: "CHANGEME :)" # Create server credentials at https://www.trackmania.com/player/dedicated-servers
+      MASTER_PASSWORD: "CHANGEME :)" # Create server credentials at https://www.trackmania.com/player/dedicated-servers
+      XMLRPC_ALLOWREMOTE: "true"
+      DISABLE_COHERENCE_CHECKS: "true"
+      DISABLE_REPLAY_RECORDING: "true"
+    volumes:
+      - UserData:/server/UserData
+
+  rmt_controller:
+    image: mattman/trackmania-rmt:latest
+    container_name: rmt_controller
+    restart: unless-stopped
+    depends_on:
+        - trackmania_server
+    volumes:
+      - UserData:/server/UserData
+    environment:
+      RMT__DiscordWebhook: ""
+      RMT__IpAddress: "trackmania_server"
+      RMT__Port: "5000"
+volumes:
+  UserData:
+    name: UserData
+
+networks:
+  default:
+    name: trackmania

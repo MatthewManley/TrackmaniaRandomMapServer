@@ -14,6 +14,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using TrackmaniaRandomMapServer.Events;
 using TrackmaniaRandomMapServer.Models;
 using TrackmaniaRandomMapServer.Options;
@@ -98,7 +99,10 @@ namespace TrackmaniaRandomMapServer.RmtService
 
             await SetupManialinkTemplateEngine();
 
-            if (!await tmClient.LoginAsync(rmtOptions.Username, rmtOptions.Password))
+
+            var (username, password) = await GetLoginCreds(stoppingToken);
+
+            if (!await tmClient.LoginAsync(username, password))
             {
                 logger.LogInformation("Failed to login");
                 return;
@@ -138,6 +142,22 @@ namespace TrackmaniaRandomMapServer.RmtService
             await Task.Delay(-1);
         }
 
+        private async Task<(string, string)> GetLoginCreds(CancellationToken cancellationToken)
+        {
+            var config = await storageHandler.ReadConfig(cancellationToken);
+            XElement root = XElement.Parse(config);
+
+            // Parse authorization levels
+            var authorizationLevels = root.Element("authorization_levels")
+                                          .Elements("level")
+                                          .Select(level => new
+                                          {
+                                              Name = level.Element("name").Value,
+                                              Password = level.Element("password").Value
+                                          });
+            var superAdmin = authorizationLevels.First(x => x.Name == "SuperAdmin");
+            return (superAdmin.Name, superAdmin.Password);
+        }
         private async Task SetupManialinkTemplateEngine()
         {
             var resources = ExecutingAssembly.GetManifestResourceNames();
@@ -511,7 +531,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 var tmp = await tmxRestClient.GetRandomMap();
                 var filename = $"RMT/{tmp.TrackID}.Map.Gbx";
                 // If we can't check for file existance or the file doesn't exist, download it
-                if (!storageHandler.CanExists || !await storageHandler.Exists(filename, CancellationToken.None))
+                if (!await storageHandler.Exists(filename, CancellationToken.None))
                 {
                     var stream = await tmxRestClient.DownloadMap(tmp);
                     await storageHandler.Write(filename, stream, CancellationToken.None);
