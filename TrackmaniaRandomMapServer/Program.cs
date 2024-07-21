@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using GbxRemoteNet;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -41,7 +42,11 @@ internal class Program
             services.AddSingleton((serviceProvider) =>
             {
                 var rmtOptions = serviceProvider.GetRequiredService<IOptions<RMTOptions>>().Value;
-                return new TrackmaniaRemoteClient(rmtOptions.IpAddress, rmtOptions.Port);
+                var gbxRemoteOptions = new GbxRemoteClientOptions
+                {
+                    ConnectionRetries = 10, // TODO: make configurable, along with retry timeout
+                };
+                return new TrackmaniaRemoteClient(rmtOptions.IpAddress, rmtOptions.Port, gbxRemoteOptions);
             });
             var storageType = hostContext.Configuration.GetValue<string>("StorageType");
             switch (storageType?.ToUpperInvariant())
