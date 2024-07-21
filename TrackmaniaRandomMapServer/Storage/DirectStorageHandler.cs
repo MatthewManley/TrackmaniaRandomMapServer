@@ -16,14 +16,14 @@ namespace TrackmaniaRandomMapServer.Storage
         const string UserDataPath = "/server/UserData";
         const string RmtMapsPath = "/server/UserData/Maps/RMT";
 
-        public Task Delete(string fileName, CancellationToken cancellationToken)
+        public Task DeleteMap(string fileName, CancellationToken cancellationToken)
         {
             var path = Path.Join(RmtMapsPath, fileName);
             File.Delete(path);
             return Task.CompletedTask;
         }
 
-        public Task<bool> Exists(string fileName, CancellationToken cancellationToken)
+        public Task<bool> MapExists(string fileName, CancellationToken cancellationToken)
         {
             if (!Directory.Exists(RmtMapsPath))
             {
@@ -39,7 +39,7 @@ namespace TrackmaniaRandomMapServer.Storage
             return await File.ReadAllTextAsync("/server/UserData/Config/dedicated_cfg.txt", cancellationToken);
         }
 
-        public async Task Write(string fileName, Stream contents, CancellationToken cancellationToken)
+        public async Task WriteMap(string fileName, Stream contents, CancellationToken cancellationToken)
         {
             if (!Directory.Exists("/server/UserData/Maps/RMT"))
             {

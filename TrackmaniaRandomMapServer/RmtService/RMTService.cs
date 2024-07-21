@@ -533,11 +533,11 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 currentMapDetails = nextMapDetails;
                 var tmp = await tmxRestClient.GetRandomMap();
-                var filename = $"RMT/{tmp.TrackID}.Map.Gbx";
-                if (!await storageHandler.Exists(filename, CancellationToken.None))
+                var filename = $"{tmp.TrackID}.Map.Gbx";
+                if (!await storageHandler.MapExists(filename, CancellationToken.None))
                 {
                     var stream = await tmxRestClient.DownloadMap(tmp);
-                    await storageHandler.Write(filename, stream, CancellationToken.None);
+                    await storageHandler.WriteMap(filename, stream, CancellationToken.None);
                 }
                 nextMap = filename;
                 nextMapDetails = tmp;
