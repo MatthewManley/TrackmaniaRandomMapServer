@@ -56,11 +56,15 @@ internal class Program
                     services.AddTransient<IStorageHandler, DirectStorageHandler>();
                     break;
             }
-            services.AddSingleton((serviceProvider) =>
+            var webhook = hostContext.Configuration.GetSection("RMT").GetValue<string>("DiscordWebhook", null);
+            if (webhook is not null)
             {
-                var rmtOptions = serviceProvider.GetRequiredService<IOptions<RMTOptions>>();
-                return new Discord.Webhook.DiscordWebhookClient(rmtOptions.Value.DiscordWebhook);
-            });
+                services.AddSingleton((serviceProvider) =>
+                {
+                    var rmtOptions = serviceProvider.GetRequiredService<IOptions<RMTOptions>>();
+                    return new Discord.Webhook.DiscordWebhookClient(rmtOptions.Value.DiscordWebhook);
+                });
+            }
             services.AddHostedService<RMTService>();
         });
 }

@@ -4,6 +4,7 @@ using GbxRemoteNet.Enums;
 using GbxRemoteNet.Events;
 using ManiaTemplates;
 using ManiaTemplates.Lib;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -63,12 +64,12 @@ namespace TrackmaniaRandomMapServer.RmtService
                           PlayerStateService playerStateService,
                           TrackmaniaRemoteClient trackmaniaRemoteClient,
                           IStorageHandler storageHandler,
-                          DiscordWebhookClient discordWebhookClient)
+                          IServiceProvider serviceProvider)
         {
             this.rmtOptions = rmtOptions.Value;
             this.tmClient = trackmaniaRemoteClient;
             this.storageHandler = storageHandler;
-            this.discordWebhookClient = discordWebhookClient;
+            this.discordWebhookClient = serviceProvider.GetService<DiscordWebhookClient>();
             this.logger = logger;
             this.tmxRestClient = tmxRestClient;
             this.playerStateService = playerStateService;
@@ -245,7 +246,8 @@ namespace TrackmaniaRandomMapServer.RmtService
 
                 var message = $"Got AT on map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\nCredit: {playerState.NickName ?? e.Login}\n";
                 message += LeaderboardToString();
-                _ = discordWebhookClient.SendMessageAsync(message);
+                if (discordWebhookClient is not null)
+                    _ = discordWebhookClient.SendMessageAsync(message);
 
                 var multicall = new TmMultiCall();
                 multicall.ChatSendServerMessageAsync($"{playerState.NickName ?? e.Login} got {winDifficulty.DisplayName()} Medal!");
@@ -362,7 +364,8 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 var message = $"RMT ended on map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\n";
                 message += LeaderboardToString();
-                _ = discordWebhookClient.SendMessageAsync(message);
+                if (discordWebhookClient is not null)
+                    _ = discordWebhookClient.SendMessageAsync(message);
             }
 
             SetTmScoreboardVisibility(multicall, false);
@@ -530,7 +533,6 @@ namespace TrackmaniaRandomMapServer.RmtService
                 currentMapDetails = nextMapDetails;
                 var tmp = await tmxRestClient.GetRandomMap();
                 var filename = $"RMT/{tmp.TrackID}.Map.Gbx";
-                // If we can't check for file existance or the file doesn't exist, download it
                 if (!await storageHandler.Exists(filename, CancellationToken.None))
                 {
                     var stream = await tmxRestClient.DownloadMap(tmp);

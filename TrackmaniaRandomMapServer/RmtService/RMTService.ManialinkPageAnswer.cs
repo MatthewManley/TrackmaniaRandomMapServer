@@ -165,7 +165,8 @@ namespace TrackmaniaRandomMapServer.RmtService
 
                     var message = $"Gold Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\nCredit: {playerState.NickName}\n";
                     message += LeaderboardToString();
-                    _ = discordWebhookClient.SendMessageAsync(message);
+                    if (discordWebhookClient is not null)
+                        _ = discordWebhookClient.SendMessageAsync(message);
 
                     var multicall = new TmMultiCall();
                     await UpdateView(multicall);
@@ -235,8 +236,8 @@ namespace TrackmaniaRandomMapServer.RmtService
                     semaphoreSlim.Release();
                     return;
                 }
-
-                _ = discordWebhookClient.SendMessageAsync("An RMT round is starting!");
+                if (discordWebhookClient is not null)
+                    _ = discordWebhookClient.SendMessageAsync("An RMT round is starting!");
 
                 rmtPosition = RmtPosition.StartedHub;
                 playerStateService.CancelAllVotes();
@@ -330,7 +331,8 @@ namespace TrackmaniaRandomMapServer.RmtService
 
                     var message = $"Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\n";
                     message += LeaderboardToString();
-                    _ = discordWebhookClient.SendMessageAsync(message);
+                    if (discordWebhookClient is not null)
+                        _ = discordWebhookClient.SendMessageAsync(message);
 
                     var multicall = new TmMultiCall();
                     await UpdateView(multicall);
