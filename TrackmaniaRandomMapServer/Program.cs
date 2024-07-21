@@ -57,7 +57,7 @@ internal class Program
                     break;
             }
             var webhook = hostContext.Configuration.GetSection("RMT").GetValue<string>("DiscordWebhook", null);
-            if (webhook is not null)
+            if (!string.IsNullOrWhiteSpace(webhook))
             {
                 services.AddSingleton((serviceProvider) =>
                 {
