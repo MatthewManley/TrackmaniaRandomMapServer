@@ -106,7 +106,8 @@ namespace TrackmaniaRandomMapServer.RmtService
             if (!await tmClient.LoginAsync(username, password))
             {
                 logger.LogInformation("Failed to login");
-                return;
+                // This should cause the container to restart iff configured
+                throw new Exception();
             }
             else
             {
