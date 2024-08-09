@@ -28,7 +28,6 @@ namespace TrackmaniaRandomMapServer.RmtService
         private Difficulty winDifficulty = Difficulty.Author;
         private Difficulty goodSkipDifficulty = Difficulty.Gold;
 
-        private readonly RMTOptions rmtOptions;
         private readonly TrackmaniaRemoteClient tmClient;
         private readonly IStorageHandler storageHandler;
         private readonly DiscordWebhookClient discordWebhookClient;
@@ -59,14 +58,12 @@ namespace TrackmaniaRandomMapServer.RmtService
 
 
         public RMTService(ILogger<RMTService> logger,
-                          IOptions<RMTOptions> rmtOptions,
                           TmxRestClient tmxRestClient,
                           PlayerStateService playerStateService,
                           TrackmaniaRemoteClient trackmaniaRemoteClient,
                           IStorageHandler storageHandler,
                           IServiceProvider serviceProvider)
         {
-            this.rmtOptions = rmtOptions.Value;
             this.tmClient = trackmaniaRemoteClient;
             this.storageHandler = storageHandler;
             this.discordWebhookClient = serviceProvider.GetService<DiscordWebhookClient>();
@@ -87,7 +84,6 @@ namespace TrackmaniaRandomMapServer.RmtService
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             tmClient.OnWaypoint += Client_OnWaypoint;
-            tmClient.OnModeScriptCallback += Client_OnModeScriptCallback;
             tmClient.OnPlayerManialinkPageAnswer += Client_OnPlayerManialinkPageAnswer;
             tmClient.OnPlayerConnect += Client_OnPlayerConnect;
             tmClient.OnPlayerInfoChanged += Client_OnPlayerInfoChanged;
@@ -97,6 +93,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             tmClient.OnEndMapEnd += Client_OnEndMapEnd;
             tmClient.OnEndMapStart += Client_OnEndMapStart;
             tmClient.OnPlayerChat += TmClient_OnPlayerChat;
+            tmClient.OnDisconnected += TmClient_OnDisconnected;
 
             await SetupManialinkTemplateEngine();
 
@@ -142,6 +139,11 @@ namespace TrackmaniaRandomMapServer.RmtService
             await tmClient.MultiCallAsync(multicall);
 
             await Task.Delay(-1);
+        }
+
+        private Task TmClient_OnDisconnected()
+        {
+            throw new Exception();
         }
 
         private async Task<(string, string)> GetLoginCreds(CancellationToken cancellationToken)
@@ -351,7 +353,7 @@ namespace TrackmaniaRandomMapServer.RmtService
         {
             await semaphoreSlim.WaitAsync();
             bool finishRmt = false;
-            if (rmtPosition != RmtPosition.PostRound && rmtPosition != RmtPosition.StartedHub)
+            if (rmtPosition != RmtPosition.PostRound && rmtPosition != RmtPosition.StartedHub && rmtPosition != RmtPosition.NotStartedHub)
             {
                 rmtPosition = RmtPosition.EndedScoreboard;
                 finishRmt = true;
@@ -545,7 +547,6 @@ namespace TrackmaniaRandomMapServer.RmtService
             }
             catch (Exception ex)
             {
-                //logger.LogWarning("FAILED TO DOWNLOAD MAP");
                 logger.LogError(ex, "FAILED TO DOWNLOAD MAP");
                 return false;
             }
@@ -556,20 +557,6 @@ namespace TrackmaniaRandomMapServer.RmtService
             var settings = await tmClient.GetModeScriptSettingsAsync();
             settings["S_TimeLimit"] = time;
             return multicall.SetModeScriptSettingsAsync(settings);
-        }
-
-        private Task Client_OnModeScriptCallback(string method, Newtonsoft.Json.Linq.JObject data)
-        {
-            try
-            {
-                logger.LogTrace($"Client_OnModeScriptCallback: {method}");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error in Client_OnModeScriptCallback");
-                throw;
-            }
-            return Task.CompletedTask;
         }
     }
 }

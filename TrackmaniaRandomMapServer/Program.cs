@@ -30,7 +30,6 @@ internal class Program
             services.AddOptions();
             services.AddSingleton<PlayerStateService>();
             services.AddTransient<TmxRestClient>();
-            services.AddHttpClient();
             services.ConfigureHttpClientDefaults(client =>
             {
                 client.ConfigureHttpClient(httpClient =>
@@ -38,6 +37,7 @@ internal class Program
                     httpClient.DefaultRequestHeaders.Add("User-Agent", "TM RMT - https%3A%2F%2Fgithub.com%2FMatthewManley%2FTrackmaniaRandomMapServer");
                 });
             });
+            services.AddHttpClient<TmxRestClient>();
             services.Configure<RMTOptions>(hostContext.Configuration.GetSection("RMT"));
             services.AddSingleton((serviceProvider) =>
             {
@@ -46,11 +46,14 @@ internal class Program
                 {
                     ConnectionRetries = 10, // TODO: make configurable, along with retry timeout
                 };
-                return new TrackmaniaRemoteClient(rmtOptions.IpAddress, rmtOptions.Port, gbxRemoteOptions);
+                var logger = serviceProvider.GetRequiredService<ILogger<TrackmaniaRemoteClient>>();
+                return new TrackmaniaRemoteClient(rmtOptions.IpAddress, rmtOptions.Port, gbxRemoteOptions, logger);
             });
             var storageType = hostContext.Configuration.GetValue<string>("StorageType");
             switch (storageType?.ToUpperInvariant())
             {
+                // TODO: I intend to support SFTP so the controller and server can be on different devices
+                // but for easy of development I had set this aside for another time
                 //case "SFTP":
                 //    services.Configure<SftpOptions>(hostContext.Configuration.GetSection("Sftp"));
                 //    services.AddHostedService<SftpHostService>();

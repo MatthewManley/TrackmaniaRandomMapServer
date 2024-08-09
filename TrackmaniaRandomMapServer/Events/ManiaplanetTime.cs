@@ -4,7 +4,7 @@ namespace TrackmaniaRandomMapServer.Events
 {
     public class ManiaplanetTime
     {
-        [JsonProperty("count")]
+        [JsonProperty("time")]
         public int Time { get; set; }
     }
 }
