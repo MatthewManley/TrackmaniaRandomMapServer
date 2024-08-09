@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Linq;
 
 namespace TrackmaniaRandomMapServer.Models
 {
@@ -166,5 +167,15 @@ namespace TrackmaniaRandomMapServer.Models
 
         [JsonProperty("VideoCount")]
         public int VideoCount { get; set; }
+
+        public bool IsPrepatchIce
+        {
+            get
+            {
+                var tags = this.Tags.Split(',');
+                var hasIceTag = tags.Contains("14") || tags.Contains("44");
+                return this.UpdatedAt.Date <= new DateTime(2022, 10, 1) && hasIceTag;
+            }
+        }
     }
 }

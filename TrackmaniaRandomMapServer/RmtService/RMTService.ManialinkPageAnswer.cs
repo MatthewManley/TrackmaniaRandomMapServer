@@ -316,7 +316,10 @@ namespace TrackmaniaRandomMapServer.RmtService
                 {
                     var player = playerStateService.GetPlayerState(login);
                     rmtPosition = RmtPosition.PostRound;
-                    badSkipScore += 1;
+                    if (!currentMapDetails.IsPrepatchIce)
+                    {
+                        badSkipScore += 1;
+                    }
 
                     if (mapStartTime.HasValue)
                     {

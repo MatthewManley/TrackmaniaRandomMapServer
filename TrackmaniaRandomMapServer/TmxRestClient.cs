@@ -31,7 +31,7 @@ namespace TrackmaniaRandomMapServer
             {
 
                 var uriBuilder = new UriBuilder();
-                uriBuilder.Host = "map-monitor.xk.io";
+                uriBuilder.Host = "trackmania.exchange";
                 uriBuilder.Scheme = "https";
                 uriBuilder.Path = "/mapsearch2/search";
                 uriBuilder.Query = "?api=on&random=1&lengthop=1&length=9&etags=23,46,40,41,42,37";

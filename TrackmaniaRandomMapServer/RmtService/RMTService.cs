@@ -439,15 +439,9 @@ namespace TrackmaniaRandomMapServer.RmtService
             await UpdateView(multicall);
             await SetRemainingTime(multicall, remainingTime);
 
-            if (currentMapDetails is not null)
+            if (currentMapDetails is not null && currentMapDetails.IsPrepatchIce)
             {
-                //await tmClient.ChatSendServerMessageAsync($"Map Details: {currentMapDetails.Name} by {currentMapDetails.Username}");
-                var tags = currentMapDetails.Tags.Split(',');
-                var hasIceTag = tags.Contains("14") || tags.Contains("44");
-                if (currentMapDetails.UpdatedAt.Date <= new DateTime(2022, 10, 1) && hasIceTag)
-                {
-                    multicall.ChatSendServerMessageAsync("Possible Prepatch Ice Map");
-                }
+                multicall.ChatSendServerMessageAsync("Possible Prepatch Ice Map");
             }
             await tmClient.MultiCallAsync(multicall);
         }
