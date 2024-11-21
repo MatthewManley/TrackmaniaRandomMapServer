@@ -29,18 +29,18 @@ namespace NadeoAPI
             if (parts.Length != 3)
                 throw new Exception();
             var middlePart = parts[1];
-            try
-            {
-                var converted = Convert.FromBase64String(middlePart);
-                var middleDecoded = Encoding.UTF8.GetString(converted);
-                return JsonSerializer.Deserialize<DecodedToken>(middleDecoded);
 
-            }
-            catch (FormatException)
+            // In the JWT, it doesn't pad the base64 string with =
+            // But C# really wants them to be there
+            // so we need to add them ourselves if they are not there
+            if (middlePart.Length % 4 != 0)
             {
-                Console.WriteLine($"FORMAT EXCEPTION: {middlePart}");
-                throw;
+                middlePart += new string('=', 4 - middlePart.Length % 4);
             }
+
+            var converted = Convert.FromBase64String(middlePart);
+            var middleDecoded = Encoding.UTF8.GetString(converted);
+            return JsonSerializer.Deserialize<DecodedToken>(middleDecoded);
         }
     }
 }
