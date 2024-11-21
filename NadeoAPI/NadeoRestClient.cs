@@ -101,17 +101,8 @@ namespace NadeoAPI
             cancellationToken.ThrowIfCancellationRequested();
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            try
-            {
-                var result = JsonSerializer.Deserialize<GetTokenResponseBody>(body);
-                return result;
-            }
-            catch (FormatException)
-            {
-                this.logger.LogError("Bad format {token}", body);
-                throw;
-            }
+            var result = JsonSerializer.Deserialize<GetTokenResponseBody>(body);
+            return result;
         }
 
         /// <summary>

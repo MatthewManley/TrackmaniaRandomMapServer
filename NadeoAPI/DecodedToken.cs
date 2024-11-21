@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using Microsoft.Extensions.Logging;
+using System.Text;
 using System.Text.Json;
 
 namespace NadeoAPI
@@ -27,8 +28,19 @@ namespace NadeoAPI
             var parts = token.Split('.');
             if (parts.Length != 3)
                 throw new Exception();
-            var middle = Encoding.UTF8.GetString(Convert.FromBase64String(parts[1]));
-            return JsonSerializer.Deserialize<DecodedToken>(middle);
+            var middlePart = parts[1];
+            try
+            {
+                var converted = Convert.FromBase64String(middlePart);
+                var middleDecoded = Encoding.UTF8.GetString(converted);
+                return JsonSerializer.Deserialize<DecodedToken>(middleDecoded);
+
+            }
+            catch (FormatException)
+            {
+                Console.WriteLine($"FORMAT EXCEPTION: {middlePart}");
+                throw;
+            }
         }
     }
 }
