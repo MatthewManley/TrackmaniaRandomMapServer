@@ -99,6 +99,7 @@ namespace TrackmaniaRandomMapServer.RmtService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            logger.LogInformation("ExecuteAsync!");
             tmClient.OnWaypoint += Client_OnWaypoint;
             tmClient.OnPlayerManialinkPageAnswer += Client_OnPlayerManialinkPageAnswer;
             tmClient.OnPlayerConnect += Client_OnPlayerConnect;

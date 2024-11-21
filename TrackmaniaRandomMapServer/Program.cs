@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NadeoAPI;
+using System;
 using System.Threading.Tasks;
 using TrackmaniaExchangeAPI;
 using TrackmaniaRandomMapServer;
@@ -14,7 +15,11 @@ using TrackmaniaRandomMapServer.Storage;
 
 internal class Program
 {
-    public static async Task Main(string[] args) => await CreateHostBuilder(args).Build().RunAsync();
+    public static async Task Main(string[] args)
+    {
+        Console.WriteLine("Startup!");
+        await CreateHostBuilder(args).Build().RunAsync();
+    }
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)

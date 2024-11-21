@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -24,7 +25,9 @@ namespace NadeoAPI
         private GetTokenResponseBody? LiveToken = null;
         private GetTokenResponseBody? MeetToken = null;
 
-        public NadeoRestClient(HttpClient httpClient, NadeoRestClientOptions options)
+        private ILogger<NadeoRestClient> logger { get; }
+
+        public NadeoRestClient(HttpClient httpClient, NadeoRestClientOptions options, ILogger<NadeoRestClient> logger)
         {
             if (string.IsNullOrWhiteSpace(options.Username) || string.IsNullOrWhiteSpace(options.Password))
             {
@@ -32,6 +35,7 @@ namespace NadeoAPI
             }
             this.httpClient = httpClient;
             this.options = options;
+            this.logger = logger;
         }
 
         private GetTokenResponseBody? GetToken(SubApi subApi)
@@ -131,8 +135,16 @@ namespace NadeoAPI
             cancellationToken.ThrowIfCancellationRequested();
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var result = JsonSerializer.Deserialize<MapInfo>(content);
-            return result;
+            try
+            {
+                var result = JsonSerializer.Deserialize<MapInfo>(content);
+                return result;
+            }
+            catch (FormatException)
+            {
+                this.logger.LogError("Bad format {token}", content);
+                throw;
+            }
         }
 
         ///// <summary>
