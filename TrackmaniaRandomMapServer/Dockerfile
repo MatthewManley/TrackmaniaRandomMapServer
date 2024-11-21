@@ -9,6 +9,8 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["NadeoAPI/NadeoAPI.csproj", "NadeoAPI/"]
+COPY ["TmxRestClient/TrackmaniaExchangeAPI.csproj", "TmxRestClient/"]
 COPY ["TrackmaniaRandomMapServer/TrackmaniaRandomMapServer.csproj", "TrackmaniaRandomMapServer/"]
 RUN dotnet restore "./TrackmaniaRandomMapServer/TrackmaniaRandomMapServer.csproj"
 COPY . .
