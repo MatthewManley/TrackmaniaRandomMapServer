@@ -31,6 +31,10 @@
   - Direct access over docker shares
   - SFTP access if controller is on different server than the tm server
   - Other ideas?
+- Make TMX random map picker use standardized tags
+  - Only 23,37,40 (Kacky,Royal,Arena)
+  - LengthOp 1
+  - Length 9  
 
 ## Project Tasks
 

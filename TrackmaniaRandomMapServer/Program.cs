@@ -4,7 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NadeoAPI;
 using System.Threading.Tasks;
+using TrackmaniaExchangeAPI;
 using TrackmaniaRandomMapServer;
 using TrackmaniaRandomMapServer.Options;
 using TrackmaniaRandomMapServer.RmtService;
@@ -49,6 +51,19 @@ internal class Program
                 var logger = serviceProvider.GetRequiredService<ILogger<TrackmaniaRemoteClient>>();
                 return new TrackmaniaRemoteClient(rmtOptions.IpAddress, rmtOptions.Port, gbxRemoteOptions, logger);
             });
+            services.AddSingleton<RandomMapService>();
+            services.AddSingleton<TmxRestClient>();
+            services.AddSingleton<NadeoRestClient>();
+            services.AddTransient<TmxRestClientOptions>();
+            services.AddSingleton((services) =>
+            {
+                var rmtOptions = services.GetRequiredService<IOptions<RMTOptions>>();
+                return new NadeoRestClientOptions()
+                {
+                    Username = rmtOptions.Value.NadeoUsername,
+                    Password = rmtOptions.Value.NadeoPassword,
+                };
+            }) ;
             var storageType = hostContext.Configuration.GetValue<string>("StorageType");
             switch (storageType?.ToUpperInvariant())
             {

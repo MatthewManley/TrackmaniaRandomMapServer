@@ -1,9 +1,8 @@
 ﻿using Newtonsoft.Json;
-using System.Collections.Generic;
 
-namespace TrackmaniaRandomMapServer.Models
+namespace TrackmaniaExchangeAPI.Models
 {
-    public class TmxQueryResult
+    public class SearchMapResult
     {
         [JsonProperty("results")]
         public List<TmxMap> results { get; set; }

@@ -12,8 +12,8 @@ namespace TrackmaniaRandomMapServer.Storage
     public interface IStorageHandler
     {
         public Task<string> ReadConfig(CancellationToken cancellationToken);
-        public Task WriteMap(string fileName, Stream contents, CancellationToken cancellationToken);
-        public Task<bool> MapExists(string fileName, CancellationToken cancellationToken);
-        public Task DeleteMap(string fileName, CancellationToken cancellationToken);
+        public Task WriteMap(string fileName, Stream contents, CancellationToken cancellationToken = default);
+        public Task<bool> MapExists(string fileName, CancellationToken cancellationToken = default);
+        public Task DeleteMap(string fileName, CancellationToken cancellationToken = default);
     }
 }

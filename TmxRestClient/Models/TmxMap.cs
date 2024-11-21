@@ -1,8 +1,7 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Linq;
+using System.Text.Json;
 
-namespace TrackmaniaRandomMapServer.Models
+namespace TrackmaniaExchangeAPI.Models
 {
     public class TmxMap
     {
@@ -175,6 +174,14 @@ namespace TrackmaniaRandomMapServer.Models
                 var tags = this.Tags.Split(',');
                 var hasIceTag = tags.Contains("14") || tags.Contains("44");
                 return this.UpdatedAt.Date <= new DateTime(2022, 10, 1) && hasIceTag;
+            }
+        }
+
+        public bool IsOverThreeMinutes
+        {
+            get
+            {
+                return this.AuthorTime >= 3 * 60 * 1000;
             }
         }
     }

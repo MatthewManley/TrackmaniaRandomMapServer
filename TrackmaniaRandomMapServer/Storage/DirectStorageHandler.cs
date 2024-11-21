@@ -14,22 +14,23 @@ namespace TrackmaniaRandomMapServer.Storage
     public class DirectStorageHandler : IStorageHandler
     {
         const string UserDataPath = "/server/UserData";
-        const string RmtMapsPath = "/server/UserData/Maps/RMT";
+        const string MapsPath = "/server/UserData/Maps";
 
         public Task DeleteMap(string fileName, CancellationToken cancellationToken)
         {
-            var path = Path.Join(RmtMapsPath, fileName);
+            var path = Path.Join(MapsPath, fileName);
             File.Delete(path);
             return Task.CompletedTask;
         }
 
         public Task<bool> MapExists(string fileName, CancellationToken cancellationToken)
         {
-            if (!Directory.Exists(RmtMapsPath))
+            var path = Path.Join(MapsPath, fileName);
+            var directory = Path.GetDirectoryName(path);
+            if (!Directory.Exists(directory))
             {
                 return Task.FromResult(false);
             }
-            var path = Path.Join(RmtMapsPath, fileName);
             var exists = File.Exists(path);
             return Task.FromResult(exists);
         }
@@ -41,11 +42,13 @@ namespace TrackmaniaRandomMapServer.Storage
 
         public async Task WriteMap(string fileName, Stream contents, CancellationToken cancellationToken)
         {
-            if (!Directory.Exists("/server/UserData/Maps/RMT"))
+            var path = Path.Join(MapsPath, fileName);
+            var tmpFileName = Path.GetFileName(fileName);
+            var dirName = path.Substring(0, path.Length - tmpFileName.Length);
+            if (!Directory.Exists(dirName))
             {
-                Directory.CreateDirectory(RmtMapsPath);
+                Directory.CreateDirectory(dirName);
             }
-            var path = Path.Join(RmtMapsPath, fileName);
             using var fileStream = File.Create(path);
             await contents.CopyToAsync(fileStream, cancellationToken);
         }

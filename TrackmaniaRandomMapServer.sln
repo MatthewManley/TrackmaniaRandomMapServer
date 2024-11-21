@@ -3,7 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrackmaniaRandomMapServer", "TrackmaniaRandomMapServer\TrackmaniaRandomMapServer.csproj", "{9DA15A37-4F7E-4FD9-80BA-CF25F7E5E181}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrackmaniaRandomMapServer", "TrackmaniaRandomMapServer\TrackmaniaRandomMapServer.csproj", "{9DA15A37-4F7E-4FD9-80BA-CF25F7E5E181}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrackmaniaExchangeAPI", "TmxRestClient\TrackmaniaExchangeAPI.csproj", "{A76E7C41-1EDB-48E7-8FC7-0A4F8D366655}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NadeoAPI", "NadeoAPI\NadeoAPI.csproj", "{A82D1EE4-A7C3-4660-8791-1C3FC444B119}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Workbench", "Workbench\Workbench.csproj", "{69F5935B-B60C-4E84-AE1D-F98707879ED3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +21,18 @@ Global
 		{9DA15A37-4F7E-4FD9-80BA-CF25F7E5E181}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9DA15A37-4F7E-4FD9-80BA-CF25F7E5E181}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9DA15A37-4F7E-4FD9-80BA-CF25F7E5E181}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A76E7C41-1EDB-48E7-8FC7-0A4F8D366655}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A76E7C41-1EDB-48E7-8FC7-0A4F8D366655}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A76E7C41-1EDB-48E7-8FC7-0A4F8D366655}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A76E7C41-1EDB-48E7-8FC7-0A4F8D366655}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A82D1EE4-A7C3-4660-8791-1C3FC444B119}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A82D1EE4-A7C3-4660-8791-1C3FC444B119}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A82D1EE4-A7C3-4660-8791-1C3FC444B119}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A82D1EE4-A7C3-4660-8791-1C3FC444B119}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69F5935B-B60C-4E84-AE1D-F98707879ED3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69F5935B-B60C-4E84-AE1D-F98707879ED3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69F5935B-B60C-4E84-AE1D-F98707879ED3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69F5935B-B60C-4E84-AE1D-F98707879ED3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

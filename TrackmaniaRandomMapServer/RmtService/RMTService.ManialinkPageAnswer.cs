@@ -163,7 +163,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                     logger.LogTrace("OnForceGoldSkip exit semaphor");
                     semaphoreSlim.Release();
 
-                    var message = $"Gold Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\nCredit: {playerState.NickName}\n";
+                    var message = $"Gold Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\nCredit: {playerState.NickName}\n";
                     message += LeaderboardToString();
                     if (discordWebhookClient is not null)
                         _ = discordWebhookClient.SendMessageAsync(message);
@@ -316,7 +316,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 {
                     var player = playerStateService.GetPlayerState(login);
                     rmtPosition = RmtPosition.PostRound;
-                    if (!currentMapDetails.IsPrepatchIce)
+                    if (!currentMapDetails.TmxMapInfo.IsPrepatchIce && !currentMapDetails.TmxMapInfo.IsOverThreeMinutes)
                     {
                         badSkipScore += 1;
                     }
@@ -332,7 +332,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                     logger.LogTrace("OnForceSkip exit semaphor");
                     semaphoreSlim.Release();
 
-                    var message = $"Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TrackID}>\n";
+                    var message = $"Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\n";
                     message += LeaderboardToString();
                     if (discordWebhookClient is not null)
                         _ = discordWebhookClient.SendMessageAsync(message);
