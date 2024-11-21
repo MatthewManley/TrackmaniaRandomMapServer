@@ -101,8 +101,17 @@ namespace NadeoAPI
             cancellationToken.ThrowIfCancellationRequested();
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            var result = JsonSerializer.Deserialize<GetTokenResponseBody>(body);
-            return result;
+
+            try
+            {
+                var result = JsonSerializer.Deserialize<GetTokenResponseBody>(body);
+                return result;
+            }
+            catch (FormatException)
+            {
+                this.logger.LogError("Bad format {token}", body);
+                throw;
+            }
         }
 
         /// <summary>
@@ -135,16 +144,8 @@ namespace NadeoAPI
             cancellationToken.ThrowIfCancellationRequested();
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            try
-            {
-                var result = JsonSerializer.Deserialize<MapInfo>(content);
-                return result;
-            }
-            catch (FormatException)
-            {
-                this.logger.LogError("Bad format {token}", content);
-                throw;
-            }
+            var result = JsonSerializer.Deserialize<MapInfo>(content);
+            return result;
         }
 
         ///// <summary>
