@@ -38,10 +38,10 @@ namespace TrackmaniaRandomMapServer
                 var map = await tmxRestClient.GetRandomMapChallengeMap();
                 if (map is null)
                     continue;
-                var nadeoResult = await nadeoRestClient.GetMapInfo(map.TrackUID, cancellationToken);
+                var nadeoResult = await nadeoRestClient.GetMapInfo(map.MapUid, cancellationToken);
                 if (nadeoResult is null)
                     continue;
-                var filename = Path.Join("RMT", $"{map.TrackID}.Map.Gbx");
+                var filename = Path.Join("RMT", $"{map.MapId}.Map.Gbx");
 
                 // TODO: verify map is actually downloaded properly rather than just delete and redownload
                 if (await storageHandler.MapExists(filename, cancellationToken))

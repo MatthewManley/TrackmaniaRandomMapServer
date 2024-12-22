@@ -165,7 +165,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                     logger.LogTrace("OnForceGoldSkip exit semaphor");
                     semaphoreSlim.Release();
 
-                    var message = $"Gold Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\nCredit: {playerState.NickName}\n";
+                    var message = $"Gold Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.MapId}>\nCredit: {playerState.NickName}\n";
                     message += LeaderboardToString();
                     if (discordWebhookClient is not null)
                     {
@@ -348,7 +348,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                     logger.LogTrace("OnForceSkip exit semaphor");
                     semaphoreSlim.Release();
 
-                    var message = $"Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\n";
+                    var message = $"Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.MapId}>\n";
                     message += LeaderboardToString();
                     if (discordWebhookClient is not null)
                     {
