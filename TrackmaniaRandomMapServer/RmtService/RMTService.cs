@@ -1,5 +1,4 @@
-﻿using Discord.Webhook;
-using GbxRemoteNet;
+﻿using GbxRemoteNet;
 using GbxRemoteNet.Enums;
 using GbxRemoteNet.Events;
 using ManiaTemplates;
@@ -8,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NetCord.Rest;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -15,13 +15,9 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
-using TrackmaniaExchangeAPI;
-using TrackmaniaExchangeAPI.Models;
 using TrackmaniaRandomMapServer.Events;
 using TrackmaniaRandomMapServer.Models;
 using TrackmaniaRandomMapServer.Options;
-using TrackmaniaRandomMapServer.Storage;
 
 namespace TrackmaniaRandomMapServer.RmtService
 {
@@ -31,12 +27,10 @@ namespace TrackmaniaRandomMapServer.RmtService
         private Difficulty goodSkipDifficulty = Difficulty.Gold;
 
         private readonly TrackmaniaRemoteClient tmClient;
-        private readonly IStorageHandler storageHandler;
         private readonly RandomMapService randomMapService;
         private readonly RMTOptions rmtOptions;
-        private readonly DiscordWebhookClient discordWebhookClient;
+        private readonly WebhookClient discordWebhookClient;
         private readonly ILogger<RMTService> logger;
-        private readonly TmxRestClient tmxRestClient;
         private readonly PlayerStateService playerStateService;
         private ManiaTemplateEngine templateEngine;
 
@@ -49,12 +43,6 @@ namespace TrackmaniaRandomMapServer.RmtService
         private int winScore = 0;
         private int goodSkipScore = 0;
         private int badSkipScore = 0;
-
-        private int ATLimit = 3 * 60 * 1000;
-
-        //private string nextMap = null;
-        //private TmxMap nextMapDetails = null;
-        //private TmxMap currentMapDetails = null;
 
         private CombinedMapResult currentMapDetails = null;
         private Queue<CombinedMapResult> nextMapDetails = new();
@@ -70,21 +58,17 @@ namespace TrackmaniaRandomMapServer.RmtService
 
 
         public RMTService(ILogger<RMTService> logger,
-                          TmxRestClient tmxRestClient,
                           PlayerStateService playerStateService,
                           TrackmaniaRemoteClient trackmaniaRemoteClient,
-                          IStorageHandler storageHandler,
                           IServiceProvider serviceProvider,
                           RandomMapService randomMapService,
                           IOptions<RMTOptions> rmtOptions)
         {
             this.tmClient = trackmaniaRemoteClient;
-            this.storageHandler = storageHandler;
             this.randomMapService = randomMapService;
             this.rmtOptions = rmtOptions.Value;
-            this.discordWebhookClient = serviceProvider.GetService<DiscordWebhookClient>();
+            this.discordWebhookClient = serviceProvider.GetService<WebhookClient>();
             this.logger = logger;
-            this.tmxRestClient = tmxRestClient;
             this.playerStateService = playerStateService;
             assemblies = [ExecutingAssembly];
         }
@@ -261,8 +245,14 @@ namespace TrackmaniaRandomMapServer.RmtService
                 var message = $"Got AT on map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\nCredit: {playerState.NickName ?? e.Login}\n";
                 message += LeaderboardToString();
                 if (discordWebhookClient is not null)
-                    _ = discordWebhookClient.SendMessageAsync(message);
-
+                {
+                    var properties = new WebhookMessageProperties
+                    {
+                        Content = message,
+                        AllowedMentions = AllowedMentionsProperties.None,
+                    };
+                    _ = discordWebhookClient.ExecuteAsync(properties);
+                }
                 var multicall = new TmMultiCall();
                 multicall.ChatSendServerMessageAsync($"{playerState.NickName ?? e.Login} got {winDifficulty.DisplayName()} Medal!");
                 await UpdateView(multicall);
@@ -376,10 +366,16 @@ namespace TrackmaniaRandomMapServer.RmtService
 
             if (finishRmt)
             {
-                var message = $"RMT ended on map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\n";
-                message += LeaderboardToString();
                 if (discordWebhookClient is not null)
-                    _ = discordWebhookClient.SendMessageAsync(message);
+                {
+                    var message = $"RMT ended on map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\n";
+                    message += LeaderboardToString();
+                    var msgProperties = new WebhookMessageProperties
+                    {
+                        Content = message,
+                    };
+                    _ = discordWebhookClient.ExecuteAsync(msgProperties);
+                }
             }
 
             SetTmScoreboardVisibility(multicall, false);

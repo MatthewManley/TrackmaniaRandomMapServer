@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NadeoAPI;
+using NetCord.Rest;
 using System;
 using System.Threading.Tasks;
 using TrackmaniaExchangeAPI;
@@ -90,7 +91,10 @@ internal class Program
                 services.AddSingleton((serviceProvider) =>
                 {
                     var rmtOptions = serviceProvider.GetRequiredService<IOptions<RMTOptions>>();
-                    return new Discord.Webhook.DiscordWebhookClient(rmtOptions.Value.DiscordWebhook);
+                    var webhookParts = rmtOptions.Value.DiscordWebhook.Split('/');
+                    var webhookId = Convert.ToUInt64(webhookParts[webhookParts.Length - 2]);
+                    var webhookToken = webhookParts[webhookParts.Length - 1];
+                    return new WebhookClient(webhookId, webhookToken);
                 });
             }
             services.AddHostedService<RMTService>();

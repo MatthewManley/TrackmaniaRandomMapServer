@@ -1,6 +1,6 @@
 ﻿services:
   trackmania_server:
-    image: evotm/trackmania:latest
+    image: evoesports/trackmania:latest
     container_name: trackmania_server
     restart: unless-stopped
     ports:
@@ -8,11 +8,11 @@
       - 2350:2350/tcp
       - "5000:5000/tcp" # Do not expose this port to the internet!
     environment:
-      MASTER_LOGIN: "CHANGEME :)" # Create server credentials at https://www.trackmania.com/player/dedicated-servers
-      MASTER_PASSWORD: "CHANGEME :)" # Create server credentials at https://www.trackmania.com/player/dedicated-servers
-      XMLRPC_ALLOWREMOTE: "true"
-      DISABLE_COHERENCE_CHECKS: "true"
-      DISABLE_REPLAY_RECORDING: "true"
+      TM_MASTERSERVER_LOGIN: "CHANGEME :)" # Create server credentials at https://www.trackmania.com/player/dedicated-servers
+      TM_MASTERSERVER_PASSWORD: "CHANGEME :)" # Create server credentials at https://www.trackmania.com/player/dedicated-servers
+      TM_SYSTEM_XMLRPC_ALLOWREMOTE: "true"
+      TM_SYSTEM_DISABLE_COHERENCE_CHECKS: "true"
+      TM_SYSTEM_DISABLE_REPLAY_RECORDING: "true"
     volumes:
       - UserData:/server/UserData
 
@@ -25,9 +25,13 @@
     volumes:
       - UserData:/server/UserData
     environment:
-      RMT__DiscordWebhook: ""
+      RMT__DiscordWebhook: "" # Set to a discord webhook to post live updates to a text channel
       RMT__IpAddress: "trackmania_server"
       RMT__Port: "5000"
+      RMT__ServerUsername: "CHANGEME :)" # authorization_levels username in the dedicated_cfg.txt
+      RMT__ServerPassword: "CHANGEME :)" # authorization_levels password in the dedicated_cfg.txt
+      RMT__NadeoUsername: "CHANGEME :)" # Same as TM_MASTERSERVER_LOGIN above
+      RMT__NadeoPassword: "CHANGEME :)" # Same as TM_MASTERSERVER_PASSWORD above
 volumes:
   UserData:
     name: UserData

@@ -1,6 +1,8 @@
 ﻿using GbxRemoteNet.Events;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NetCord.Gateway;
+using NetCord.Rest;
 using System;
 using System.Linq;
 using System.Text;
@@ -166,7 +168,14 @@ namespace TrackmaniaRandomMapServer.RmtService
                     var message = $"Gold Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\nCredit: {playerState.NickName}\n";
                     message += LeaderboardToString();
                     if (discordWebhookClient is not null)
-                        _ = discordWebhookClient.SendMessageAsync(message);
+                    {
+                        var msgProperties = new WebhookMessageProperties
+                        {
+                            Content = message,
+                            AllowedMentions = AllowedMentionsProperties.None,
+                        };
+                        _ = discordWebhookClient.ExecuteAsync(msgProperties);
+                    }
 
                     var multicall = new TmMultiCall();
                     await UpdateView(multicall);
@@ -237,7 +246,14 @@ namespace TrackmaniaRandomMapServer.RmtService
                     return;
                 }
                 if (discordWebhookClient is not null)
-                    _ = discordWebhookClient.SendMessageAsync("An RMT round is starting!");
+                {
+                    var msgProperties = new WebhookMessageProperties
+                    {
+                        Content = "An RMT round is starting!",
+                        AllowedMentions = AllowedMentionsProperties.None,
+                    };
+                    _ = discordWebhookClient.ExecuteAsync(msgProperties);
+                }
 
                 rmtPosition = RmtPosition.StartedHub;
                 playerStateService.CancelAllVotes();
@@ -335,7 +351,14 @@ namespace TrackmaniaRandomMapServer.RmtService
                     var message = $"Skipped Map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\n";
                     message += LeaderboardToString();
                     if (discordWebhookClient is not null)
-                        _ = discordWebhookClient.SendMessageAsync(message);
+                    {
+                        var msgProperties = new WebhookMessageProperties
+                        {
+                            Content = message,
+                            AllowedMentions = AllowedMentionsProperties.None,
+                        };
+                        _ = discordWebhookClient.ExecuteAsync(msgProperties);
+                    }
 
                     var multicall = new TmMultiCall();
                     await UpdateView(multicall);

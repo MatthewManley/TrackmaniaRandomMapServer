@@ -28,19 +28,11 @@ namespace NadeoAPI
             var parts = token.Split('.');
             if (parts.Length != 3)
                 throw new Exception();
-            var middlePart = parts[1];
+            var base64JwtBody = parts[1];
 
-            // In the JWT, it doesn't pad the base64 string with =
-            // But C# really wants them to be there
-            // so we need to add them ourselves if they are not there
-            if (middlePart.Length % 4 != 0)
-            {
-                middlePart += new string('=', 4 - middlePart.Length % 4);
-            }
+            var jwtBody = Utils.Base64Decode(base64JwtBody);
 
-            var converted = Convert.FromBase64String(middlePart);
-            var middleDecoded = Encoding.UTF8.GetString(converted);
-            return JsonSerializer.Deserialize<DecodedToken>(middleDecoded);
+            return JsonSerializer.Deserialize<DecodedToken>(jwtBody);
         }
     }
 }

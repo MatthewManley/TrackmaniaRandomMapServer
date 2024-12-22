@@ -7,7 +7,7 @@ namespace TrackmaniaRandomMapServer
 {
     public class PlayerStateService
     {
-        private readonly Dictionary<string, PlayerState> playerStates = new();
+        public readonly Dictionary<string, PlayerState> PlayerStates = new();
 
         public PlayerStateService()
         {
@@ -15,51 +15,51 @@ namespace TrackmaniaRandomMapServer
 
         public int CurrentPlayerCount()
         {
-            return playerStates.Values.ExcludeSpectators().Count();
+            return PlayerStates.Values.ExcludeSpectators().Count();
         }
 
         public int GoldSkipVotes()
         {
-            return playerStates.Values.ExcludeSpectators().Count(x => x.VoteGoldSkip);
+            return PlayerStates.Values.ExcludeSpectators().Count(x => x.VoteGoldSkip);
         }
 
         public int SkipVotes()
         {
-            return playerStates.Values.ExcludeSpectators().Count(x => x.VoteSkip);
+            return PlayerStates.Values.ExcludeSpectators().Count(x => x.VoteSkip);
         }
 
         public int QuitVotes()
         {
-            return playerStates.Values.ExcludeSpectators().Count(x => x.VoteQuit);
+            return PlayerStates.Values.ExcludeSpectators().Count(x => x.VoteQuit);
         }
 
         public string GetLoginFromDisplayName(string displayName)
         {
             var lower = displayName.ToLower();
-            return playerStates.FirstOrDefault(x => x.Value.NickName.ToLower() == lower).Key;
+            return PlayerStates.FirstOrDefault(x => x.Value.NickName.ToLower() == lower).Key;
         }
 
         public PlayerState GetPlayerState(string login)
         {
-            if (!playerStates.TryGetValue(login, out var playerState))
+            if (!PlayerStates.TryGetValue(login, out var playerState))
             {
                 playerState = new PlayerState
                 {
                     IsSpectator = true,
                 };
-                playerStates.Add(login, playerState);
+                PlayerStates.Add(login, playerState);
             }
             return playerState;
         }
 
         public void UpsertPlayerState(string login, PlayerState playerState)
         {
-            playerStates[login] = playerState;
+            PlayerStates[login] = playerState;
         }
 
         public void CancelAllVotes()
         {
-            foreach (var playerState in playerStates.Values)
+            foreach (var playerState in PlayerStates.Values)
             {
                 playerState.VoteGoldSkip = false;
                 playerState.VoteSkip = false;
@@ -69,7 +69,7 @@ namespace TrackmaniaRandomMapServer
 
         public void ClearPlayerScores()
         {
-            foreach (var ps in playerStates.Values)
+            foreach (var ps in PlayerStates.Values)
             {
                 ps.GoodSkips = 0;
                 ps.NumWins = 0;
@@ -78,7 +78,7 @@ namespace TrackmaniaRandomMapServer
 
         public void ClearBestTimes()
         {
-            foreach (var playerState in playerStates.Values)
+            foreach (var playerState in PlayerStates.Values)
             {
                 playerState.BestMapTime = null;
             }
@@ -86,7 +86,7 @@ namespace TrackmaniaRandomMapServer
 
         public IEnumerable<KeyValuePair<string, PlayerState>> Players()
         {
-            return playerStates.Select(x => x);
+            return PlayerStates.Select(x => x);
         }
 
         private string FormatTime(int? time)
@@ -101,7 +101,7 @@ namespace TrackmaniaRandomMapServer
 
         public IEnumerable<LeaderboardItem> GetLeaderboard()
         {
-            return playerStates
+            return PlayerStates
                 .Where(x => !x.Value.IsSpectator || x.Value.NumWins > 0 || x.Value.GoodSkips > 0 || x.Value.BestMapTime.HasValue)
                 .OrderByDescending(x => x.Value.NumWins)
                 .ThenByDescending(x => x.Value.GoodSkips)
