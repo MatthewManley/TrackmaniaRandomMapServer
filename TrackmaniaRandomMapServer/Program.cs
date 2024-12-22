@@ -47,6 +47,8 @@ internal class Program
             });
             services.AddHttpClient<TmxRestClient>();
             services.Configure<RMTOptions>(hostContext.Configuration.GetSection("RMT"));
+            services.Configure<TmxRestClientOptions>(hostContext.Configuration.GetSection("TMX"));
+            services.AddTransient((services) => services.GetRequiredService<IOptions<TmxRestClientOptions>>().Value);
             services.AddSingleton((serviceProvider) =>
             {
                 var rmtOptions = serviceProvider.GetRequiredService<IOptions<RMTOptions>>().Value;
@@ -60,7 +62,6 @@ internal class Program
             services.AddSingleton<RandomMapService>();
             services.AddSingleton<TmxRestClient>();
             services.AddSingleton<NadeoRestClient>();
-            services.AddTransient<TmxRestClientOptions>();
             services.AddSingleton((services) =>
             {
                 var rmtOptions = services.GetRequiredService<IOptions<RMTOptions>>();

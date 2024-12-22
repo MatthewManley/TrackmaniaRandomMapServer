@@ -242,7 +242,7 @@ namespace TrackmaniaRandomMapServer.RmtService
                 logger.LogTrace("Client_OnWaypoint exit semaphor");
                 semaphoreSlim.Release();
 
-                var message = $"Got AT on map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\nCredit: {playerState.NickName ?? e.Login}\n";
+                var message = $"Got AT on map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.MapId}>\nCredit: {playerState.NickName ?? e.Login}\n";
                 message += LeaderboardToString();
                 if (discordWebhookClient is not null)
                 {
@@ -368,7 +368,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             {
                 if (discordWebhookClient is not null)
                 {
-                    var message = $"RMT ended on map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.TrackID}>\n";
+                    var message = $"RMT ended on map: <https://trackmania.exchange/maps/{currentMapDetails.TmxMapInfo.MapId}>\n";
                     message += LeaderboardToString();
                     var msgProperties = new WebhookMessageProperties
                     {

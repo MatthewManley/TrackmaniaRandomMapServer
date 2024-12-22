@@ -8,10 +8,10 @@ namespace TrackmaniaExchangeAPI
         private HttpClient httpClient;
         private readonly TmxRestClientOptions options;
 
-        public TmxRestClient(HttpClient httpClient, TmxRestClientOptions? options = null)
+        public TmxRestClient(HttpClient httpClient, TmxRestClientOptions? options)
         {
             this.httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            this.options = options ?? new();
+            this.options = options;
         }
 
         public async Task<SearchMapResult?> SearchMaps(SearchMapsParameters searchMaps, CancellationToken cancellationToken = default)
@@ -22,11 +22,11 @@ namespace TrackmaniaExchangeAPI
             var uriBuilder = new UriBuilder();
             uriBuilder.Host = options.HostName;
             uriBuilder.Scheme = options.Scheme;
-            uriBuilder.Path = "/mapsearch2/search";
+            uriBuilder.Path = "/api/maps";
 
             var parameters = new Dictionary<string, string>
             {
-                { "api", "on" }
+                { "fields", "MapId%2CMapUid%2CMedals.Author%2CMedals.Bronze%2CMedals.Gold%2CMedals.Silver%2CUpdatedAt%2CUploadedAt" }
             };
 
             if (searchMaps.Random.HasValue)
@@ -38,11 +38,11 @@ namespace TrackmaniaExchangeAPI
                 parameters.Add("etags", string.Join(',', stringTags));
             }
 
-            if (searchMaps.Length.HasValue)
-                parameters.Add("length", searchMaps.Length.Value.ToString());
+            if (searchMaps.AuthorTimeMax.HasValue)
+                parameters.Add("authortimemax", searchMaps.AuthorTimeMax.Value.ToString());
 
-            if (searchMaps.LengthOp.HasValue)
-                parameters.Add("lengthop", ((int)searchMaps.LengthOp.Value).ToString());
+            if (searchMaps.Count.HasValue)
+                parameters.Add("count", searchMaps.Count.Value.ToString());
 
             uriBuilder.Query = BuildQueryString(parameters);
 
@@ -58,12 +58,12 @@ namespace TrackmaniaExchangeAPI
             var searchParams = new SearchMapsParameters
             {
                 Random = 1,
-                LengthOp = LengthOp.LessThan,
-                Length = 9,
-                ExcludedTags = [23, 37, 40]
+                AuthorTimeMax = 180000,
+                ExcludedTags = [23, 37, 40],
+                Count = 1,
             };
             var result = await SearchMaps(searchParams, cancellationToken);
-            return result?.results.FirstOrDefault();
+            return result?.Results.FirstOrDefault();
         }
 
         private static string BuildQueryString(IEnumerable<KeyValuePair<string, string>> parameters)
@@ -72,9 +72,9 @@ namespace TrackmaniaExchangeAPI
         }
 
         public async Task<Stream> DownloadMap(TmxMap tmxMap, CancellationToken cancellationToken = default)
-            => await DownloadMap(tmxMap.TrackID, cancellationToken);
+            => await DownloadMap(tmxMap.MapId, cancellationToken);
 
-        public async Task<Stream> DownloadMap(int trackId, CancellationToken cancellationToken = default)
+        public async Task<Stream> DownloadMap(long trackId, CancellationToken cancellationToken = default)
         {
             var uriBuilder = new UriBuilder();
             uriBuilder.Host = options.HostName;
