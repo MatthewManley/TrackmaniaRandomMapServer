@@ -91,6 +91,7 @@ namespace TrackmaniaRandomMapServer.RmtService
             tmClient.OnPlayerDisconnect += Client_OnPlayerDisconnect;
             tmClient.OnStartline += Client_OnStartline;
             tmClient.OnStartMapStart += TmClient_OnStartMapStart;
+            tmClient.OnStartMapEnd += TmClient_OnStartMapEnd;
             tmClient.OnEndMapEnd += Client_OnEndMapEnd;
             tmClient.OnEndMapStart += Client_OnEndMapStart;
             tmClient.OnPlayerChat += TmClient_OnPlayerChat;
@@ -134,6 +135,14 @@ namespace TrackmaniaRandomMapServer.RmtService
             await tmClient.MultiCallAsync(multicall);
 
             await Task.Delay(-1);
+        }
+
+        private async Task TmClient_OnStartMapEnd(object sender, ManiaplanetStartMap e)
+        {
+            // Attempt to fix stuck scoreboard
+            var multicall = new TmMultiCall();
+            await UpdateView(multicall);
+            await tmClient.MultiCallAsync(multicall);
         }
 
         private Task TmClient_OnDisconnected()
