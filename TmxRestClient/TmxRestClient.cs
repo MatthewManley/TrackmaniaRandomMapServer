@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Web;
 using TrackmaniaExchangeAPI.Models;
 
 namespace TrackmaniaExchangeAPI
@@ -24,10 +25,22 @@ namespace TrackmaniaExchangeAPI
             uriBuilder.Scheme = options.Scheme;
             uriBuilder.Path = "/api/maps";
 
-            var parameters = new Dictionary<string, string>
+            var parameters = new Dictionary<string, string>();
+
+            var fields = new List<string>
             {
-                { "fields", "MapId%2CMapUid%2CMedals.Author%2CMedals.Bronze%2CMedals.Gold%2CMedals.Silver%2CUpdatedAt%2CUploadedAt" }
+                "MapId",
+                "MapUid",
+                "Medals.Author",
+                "Medals.Bronze",
+                "Medals.Gold",
+                "Medals.Silver",
+                "UpdatedAt",
+                "UploadedAt",
+                "Tags",
             };
+
+            parameters.Add("fields", HttpUtility.UrlEncode(string.Join(',', fields)));
 
             if (searchMaps.Random.HasValue)
                 parameters.Add("random", searchMaps.Random.Value.ToString());
