@@ -16,7 +16,7 @@
 	<ItemGroup>
 		<PackageReference Include="GbxRemote.Net" Version="5.0.2" />
 		<PackageReference Include="ManiaTemplates" Version="0.0.24-alpha" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
 		<PackageReference Include="NetCord" Version="1.0.0-alpha.339" />
